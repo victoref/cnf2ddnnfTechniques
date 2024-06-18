@@ -145,14 +145,15 @@ def execute(solverPath, example):
     os.system(command)
 
     command = f"grep \"Time\" {OUTPUT_PATH}/c2d_vivfied_{os.path.basename(solverPath)}_{example.split('.')[0]}.log | sed -e 's/s \\/ /\\n/g' -e 's/s$//g' >> {logFile}"
-    print(command)
     os.system(command)
 
     #Third convert original cnf to dDNNF
-    #command = cnf2dDNNFCmd(f"{EXAMPLES_PATH}/{example}")
-    #os.system(command)
+    command = cnf2dDNNFCmd(f"{EXAMPLES_PATH}/{example}")
+    os.system(command)
 
-    #command = f"grep \"Time\" {EXAMPLES_PATH}/vivfied_{example}.nnf | sed -e 's/s \/ /\n/g' -e 's/s$//g'" #Need to check EXAMPLES_PATH
+    command = f"grep \"Time\" {OUTPUT_PATH}/c2d_{os.path.basename(solverPath)}_{example.split('.')[0]}.log | sed -e 's/s \\/ /\\n/g' -e 's/s$//g' >> {logFile}"
+    os.system(command)
+
 
 # Main function
 def main():

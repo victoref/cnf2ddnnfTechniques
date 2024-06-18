@@ -42,16 +42,18 @@ SOLVERS = {
 #    7: D4_PATH
 }
 
+
 def signalHandler(sig, frame):
     print("\n[INFO] EXITING...")
     sys.exit(0)
 
-def checkBASEDIR(path):
 
+def checkBASEDIR(path):
     myFolders = os.listdir(path)
     if os.path.basename(path) != "scripts":
         print("[ERROR] Please execute the scripts in its specific folder")
         sys.exit(1)
+
 
 # Function to get command-line arguments
 def getargs(argv):
@@ -82,12 +84,14 @@ def getargs(argv):
             automatic = True
     return debug, automatic
 
+
 # Function to verify if the example file exists
 def exampleExists(example):
     """
     Checks if the specified example file exists in the examples directory.
     """
     return os.path.isfile(os.path.join(EXAMPLES_PATH, example))
+
 
 def vivifyCmd(solverPath, example, logFile, varElimination=False):
     """
@@ -107,16 +111,18 @@ def vivifyCmd(solverPath, example, logFile, varElimination=False):
     else:
         cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example} {EXAMPLES_PATH}/{example}"
         cmd += f"grep \"CPU time\" vivfied_{example} | awk '{{print \"Vivify: \" $5}}' > {logFile}"
-
     return cmd
+
 
 def cnf2dDNNFCmd(example):
     cmd = f"{C2D_PATH} -in {example} -dt_count 50 -smooth_all -count -cache_size 10 -nnf_block_size 50 | tee -a {OUTPUT_PATH}/c2d_{os.path.basename(example).split('.')[0]}.log"
     return cmd
 
+
 def modelCountCmd(example):
     cmd = f"{D4_PATH} -mc {example} 2>1 | grep \"^s\" | awk '{{print $2}}'"
     return cmd
+
 
 # Function to execute SAT solver with a given example
 def execute(solverPath, example):
@@ -156,8 +162,15 @@ def main():
     signal.signal(signal.SIGINT, signalHandler)
     checkBASEDIR(CURR_DIR)
 
+    solverChoice = ""
+    example = ""
+
     # Parse command-line arguments
-    debug, automatic = getargs(sys.argv[1:])
+    if len(sys.argv) == 3:
+        solverChoice = sys.argv[1]
+        example = sys.argv[2]
+    else:
+        debug, automatic = getargs(sys.argv[1:])
 
     # Create output directory if it does not exist
     if not os.path.exists(OUTPUT_PATH):
@@ -173,40 +186,53 @@ def main():
                 execute(SOLVERS[s], t, debug, vivification)
         print("[INFO] Proccess finished without errors")
         print("[INFO] EXITING...")
-    # Manual mode: prompt user for input
+    # Manual mode: Use args or ask user for input
     else:
-        while True:
-            # Display solver options
-            print("[INFO] Choose a SAT solver: ")
-            print("0 - EXIT")
-            for key, value in SOLVERS.items():
-                print(f"{key} - {value.split('/')[5]}")
-
-            # Prompt user to choose a solver
-            #try:
-            solverChoice = int(input("(1-5): "))
-            #except:
-            #    print("[ERROR] Invalid choice, please try again.")
-            #    continue
-
-            if solverChoice == 0:
-                print("\n[INFO] EXITING...")
-                sys.exit(0)
-
+        if len(sys.argv) == 3:
             if solverChoice not in SOLVERS:
-                print("[ERROR] Invalid choice, please try again.")
-                continue
-
-            # Prompt user to enter the name of the example file
-            example = input("[INFO] Enter the name of the example: ")
-
+                print("[ERROR] Invalid choice.")
+                print("[ERROR] EXITING...")
+                sys.exit(1)
             if not exampleExists(example):
                 print("[ERROR] Example not found.")
-                continue
-
-            # Execute the chosen solver on the specified example
+                print("[ERROR] EXITING...")
+                sys.exit(1)
             execute(SOLVERS[solverChoice], example)
             print("[INFO] Proccess finished without errors")
+            print("[INFO] EXITING...")
+        else:
+            while True:
+                # Display solver options
+                print("[INFO] Choose a SAT solver: ")
+                print("0 - EXIT")
+                for key, value in SOLVERS.items():
+                    print(f"{key} - {value.split('/')[5]}")
+
+                # Prompt user to choose a solver
+                #try:
+                solverChoice = int(input("(1-5): "))
+                #except:
+                #    print("[ERROR] Invalid choice, please try again.")
+                #    continue
+
+                if solverChoice == 0:
+                    print("\n[INFO] EXITING...")
+                    sys.exit(0)
+
+                if solverChoice not in SOLVERS:
+                    print("[ERROR] Invalid choice, please try again.")
+                    continue
+
+                # Prompt user to enter the name of the example file
+                example = input("[INFO] Enter the name of the example: ")
+
+                if not exampleExists(example):
+                    print("[ERROR] Example not found.")
+                    continue
+
+                # Execute the chosen solver on the specified example
+                execute(SOLVERS[solverChoice], example)
+                print("[INFO] Proccess finished without errors")
 
 
 # Entry point of the script

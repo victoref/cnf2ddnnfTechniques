@@ -42,6 +42,8 @@ SOLVERS = {
 #    7: D4_PATH
 }
 
+PID=os.getpid()
+
 
 def signalHandler(sig, frame):
     print("\n[INFO] EXITING...")
@@ -110,18 +112,26 @@ def vivifyCmd(solverPath, example, logFile, varElimination=False):
 
     else:
         cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example} {EXAMPLES_PATH}/{example}"
-        cmd += f"grep \"CPU time\" vivfied_{example} | awk '{{print \"Vivify: \" $5}}' > {logFile}"
-    return cmd
+        cmd += f"; grep \"CPU time\" {OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example} | awk '{{print \"Vivify: \" $5}}' > {logFile}"
+    os.system(cmd)
 
 
-def cnf2dDNNFCmd(example):
-    cmd = f"{C2D_PATH} -in {example} -dt_count 50 -smooth_all -count -cache_size 10 -nnf_block_size 50 | tee -a {OUTPUT_PATH}/c2d_{os.path.basename(example).split('.')[0]}.log"
-    return cmd
+def cnf2dDNNFCmd(example, vivified, solverName=""):
+    if vivified:
+        cmd = f"{C2D_PATH} -in {example} -dt_count 50 -smooth_all -count -cache_size 10 -nnf_block_size 50 | tee -a {OUTPUT_PATH}/c2d_{os.path.basename(example).split('.')[0]}.log"
+    else:
+        cmd = f"{C2D_PATH} -in {example} -dt_count 50 -smooth_all -count -cache_size 10 -nnf_block_size 50 | tee -a {OUTPUT_PATH}/c2d_{solverName}_{os.path.basename(example).split('.')[0]}.log"
+    os.system(cmd)
 
 
-def modelCountCmd(example):
-    cmd = f"{D4_PATH} -mc {example} 2>1 | grep \"^s\" | awk '{{print $2}}'"
-    return cmd
+def grepTimeInOutput(output, logFile):
+    cmd = f"grep \"Time\" {output} | sed -e 's/s \\/ /\\n/g' -e 's/s$//g' >> {logFile}"
+    os.system(cmd)
+
+
+def modelCountCmd(example, logFile):
+    cmd = f"{D4_PATH} -mc {example} 2>1 | grep \"^s\" | awk '{{print $2}}' >> {logFile}"
+    os.system(cmd)
 
 
 # Function to execute SAT solver with a given example
@@ -130,29 +140,35 @@ def execute(solverPath, example):
     Executes the specified SAT solver on a given example file and logs the output.
     """
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    logFile = f"{OUTPUT_PATH}/{os.path.basename(solverPath)}_{example}_{timestamp}.log"
+    logFile = f"{OUTPUT_PATH}/{solverPath.split('/')[5]}_{example}_{timestamp}.log"
 
     #First vivify the cnf with desired mechanism
-    command = vivifyCmd(solverPath, f"{example}", logFile)
-    os.system(command)
+    vivifyCmd(solverPath, f"{example}", logFile)
 
     if os.path.basename(solverPath) == "pmc":
         command = f"grep \"CPU time\" {OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example} | awk '{{print \"Vivify: \" $5}}' > {logFile}"
         os.system(command)
 
-    #Second convert vivified cnf to dDNNF
-    command = cnf2dDNNFCmd(f"{OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example}")
+    #Second count the number of solutions of the original cnf
+    modelCountCmd(f"{EXAMPLES_PATH}/{example}", logFile)
+
+    #Third count the number of solutions of the vivified cnf
+    modelCountCmd(f"{OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example}", logFile)
+
+    #Fourth convert vivified cnf to dDNNF
+    cnf2dDNNFCmd(f"{OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example}", True)
+    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_vivfied_{os.path.basename(solverPath)}_{example.split('.')[0]}.log", logFile)
+
+    #Fifth convert original cnf to dDNNF
+    cnf2dDNNFCmd(f"{EXAMPLES_PATH}/{example}", False, solverPath.split('/')[5])
+    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_{os.path.basename(solverPath)}_{example.split('.')[0]}.log", logFile)
+
+    #Sixth move original.nnf to result folder
+    command = f"mv {EXAMPLES_PATH}/{example}.nnf {OUTPUT_PATH}/"
     os.system(command)
 
-    command = f"grep \"Time\" {OUTPUT_PATH}/c2d_vivfied_{os.path.basename(solverPath)}_{example.split('.')[0]}.log | sed -e 's/s \\/ /\\n/g' -e 's/s$//g' >> {logFile}"
-    os.system(command)
-
-    #Third convert original cnf to dDNNF
-    command = cnf2dDNNFCmd(f"{EXAMPLES_PATH}/{example}")
-    os.system(command)
-
-    command = f"grep \"Time\" {OUTPUT_PATH}/c2d_{os.path.basename(solverPath)}_{example.split('.')[0]}.log | sed -e 's/s \\/ /\\n/g' -e 's/s$//g' >> {logFile}"
-    os.system(command)
+    #Seventh extract metrics like smallest ddnnf, time, memory ...
+    #The another script, here it only saves the results in a format csv, log, ...
 
 
 # Main function
@@ -165,11 +181,13 @@ def main():
 
     solverChoice = ""
     example = ""
+    debug = False
+    automatic = False
 
     # Parse command-line arguments
     if len(sys.argv) == 3:
-        solverChoice = sys.argv[1]
-        example = sys.argv[2]
+        solverChoice = int(sys.argv[1])
+        example = str(sys.argv[2])
     else:
         debug, automatic = getargs(sys.argv[1:])
 

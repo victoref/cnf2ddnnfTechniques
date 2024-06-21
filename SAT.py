@@ -25,8 +25,8 @@ MAPLELRB_PATH = f"{PROGRAM_DIR}/MapleLRB/simp/glucose"
 GLUCOSEP_PATH = f"{PROGRAM_DIR}/Glucose+/simp/glucose"
 COMSPS_PATH = f"{PROGRAM_DIR}/COMSPS+/simp/glucose"
 C2D_PATH = f"{PROGRAM_DIR}/c2d/c2d"
-#C2D_PATH = f"{PROGRAM_DIR}/c2d/mc2d"
 D4_PATH = f"{PROGRAM_DIR}/d4/d4"
+dREASONER_PATH = f"{PROGRAM_DIR}/dDNNFreasoner/query-dnnf"
 
 EXAMPLES_PATH = f"{DATA_DIR}/CNF_EXAMPLES"
 OUTPUT_PATH = f"{DATA_DIR}/SAT_RESULTS"
@@ -38,8 +38,6 @@ SOLVERS = {
     3: MAPLELRB_PATH,
     4: GLUCOSEP_PATH,
     5: COMSPS_PATH
-#    6: C2D_PATH
-#    7: D4_PATH
 }
 
 PID=os.getpid()
@@ -95,7 +93,7 @@ def exampleExists(example):
     return os.path.isfile(os.path.join(EXAMPLES_PATH, example))
 
 
-def vivifyCmd(solverPath, example, logFile, varElimination=False):
+def vivifyCmd(solverPath, solverName, example, logFile, varElimination=False):
     """
     Constructs the command to execute a SAT solver based on its path and vivification option.
     Currently, this function is not fully implemented.
@@ -108,11 +106,12 @@ def vivifyCmd(solverPath, example, logFile, varElimination=False):
 
     cmd = ""
     if os.path.basename(solverPath) == "pmc":
-        cmd = f"{solverPath} -verb=1 -vivification {EXAMPLES_PATH}/{example} | tee -a {OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example}"
+        cmd = f"{solverPath} -verb=1 -vivification {EXAMPLES_PATH}/{example} | tee -a {OUTPUT_PATH}/vivified_{solverName}_{example}"
 
     else:
-        cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example} {EXAMPLES_PATH}/{example}"
-        cmd += f"; grep \"CPU time\" {OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example} | awk '{{print \"Vivify: \" $5}}' > {logFile}"
+        cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={OUTPUT_PATH}/vivified_{solverName}_{example} {EXAMPLES_PATH}/{example}"
+        cmd += f"| grep \"CPU time\" | awk '{{print \"Vivify: \" $5}}' > {logFile}"
+        #cmd += f"; grep \"CPU time\" {OUTPUT_PATH}/vivified_{solverName}_{example} | awk '{{print \"Vivify: \" $5}}' > {logFile}"
     os.system(cmd)
 
 
@@ -129,8 +128,13 @@ def grepTimeInOutput(output, logFile):
     os.system(cmd)
 
 
-def modelCountCmd(example, logFile):
-    cmd = f"{D4_PATH} -mc {example} 2>1 | grep \"^s\" | awk '{{print $2}}' >> {logFile}"
+def cnfCountCmd(example, logFile):
+    cmd = f"{D4_PATH} -mc {example} 2>&1 | grep \"^s\" | awk '{{print \"CNF worlds: \" $2}}' >> {logFile}"
+    os.system(cmd)
+
+
+def ddnnfCountCmd(example, logFile):
+    cmd = f"{dREASONER_PATH} | awk '{{print \"dDNNF worlds: \" $2}}' >> {logFile}"
     os.system(cmd)
 
 
@@ -140,28 +144,29 @@ def execute(solverPath, example):
     Executes the specified SAT solver on a given example file and logs the output.
     """
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    logFile = f"{OUTPUT_PATH}/{solverPath.split('/')[5]}_{example}_{timestamp}.log"
+    solverName = solverPath.split('/')[5]
+    logFile = f"{OUTPUT_PATH}/{solverName}_{example}_{timestamp}.log"
 
     #First vivify the cnf with desired mechanism
-    vivifyCmd(solverPath, f"{example}", logFile)
+    vivifyCmd(solverPath, solverName, f"{example}", logFile)
 
     if os.path.basename(solverPath) == "pmc":
-        command = f"grep \"CPU time\" {OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example} | awk '{{print \"Vivify: \" $5}}' > {logFile}"
+        command = f"grep \"CPU time\" {OUTPUT_PATH}/vivified_{solverName}_{example} | awk '{{print \"Vivify: \" $5}}' > {logFile}"
         os.system(command)
 
     #Second count the number of solutions of the original cnf
-    modelCountCmd(f"{EXAMPLES_PATH}/{example}", logFile)
+    cnfCountCmd(f"{EXAMPLES_PATH}/{example}", logFile)
 
     #Third count the number of solutions of the vivified cnf
-    modelCountCmd(f"{OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example}", logFile)
+    cnfCountCmd(f"{OUTPUT_PATH}/vivified_{solverName}_{example}", logFile)
 
     #Fourth convert vivified cnf to dDNNF
-    cnf2dDNNFCmd(f"{OUTPUT_PATH}/vivfied_{os.path.basename(solverPath)}_{example}", True)
-    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_vivfied_{os.path.basename(solverPath)}_{example.split('.')[0]}.log", logFile)
+    cnf2dDNNFCmd(f"{OUTPUT_PATH}/vivified_{solverName}_{example}", True)
+    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_vivified_{solverName}_{example.split('.')[0]}.log", logFile)
 
     #Fifth convert original cnf to dDNNF
-    cnf2dDNNFCmd(f"{EXAMPLES_PATH}/{example}", False, solverPath.split('/')[5])
-    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_{os.path.basename(solverPath)}_{example.split('.')[0]}.log", logFile)
+    cnf2dDNNFCmd(f"{EXAMPLES_PATH}/{example}", False, solverName)
+    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_{solverName}_{example.split('.')[0]}.log", logFile)
 
     #Sixth move original.nnf to result folder
     command = f"mv {EXAMPLES_PATH}/{example}.nnf {OUTPUT_PATH}/"

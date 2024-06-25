@@ -33,11 +33,11 @@ OUTPUT_PATH = f"{DATA_DIR}/SAT_RESULTS"
 
 # List of available SAT solvers
 SOLVERS = {
-    1: PMC_PATH,
-    2: MAPLE_PATH,
-    3: MAPLELRB_PATH,
-    4: GLUCOSEP_PATH,
-    5: COMSPS_PATH
+    "pmc": PMC_PATH,
+    "maple": MAPLE_PATH,
+    "mapleLRB": MAPLELRB_PATH,
+    "glucose+": GLUCOSEP_PATH,
+    "comsps": COMSPS_PATH
 }
 
 PID=os.getpid()
@@ -54,35 +54,58 @@ def checkBASEDIR(path):
         print("[ERROR] Please execute the scripts in its specific folder")
         sys.exit(1)
 
+def usage():
+    print("[INFO] Usage: python script.py\n\
+                                [-h / --help]\n\
+                                [-s <solver> / --solver <solver>]\n\
+                                [-e <example> / --example <example>]\n\
+                                [-a / --automatic]")
+    print("[INFO] List of solvers [pmc, maple, mapleLRB, glucose+, comsps]")
 
 # Function to get command-line arguments
 def getargs(argv):
     """
     Parses command-line arguments to determine debug mode, automatic execution, and vivification option.
     """
-    debug = False
+    solver = ""
+    example = ""
     automatic = False
-    vivification = False
+
     try:
-        opts, args = getopt.getopt(argv, "hda", ["help", "debug", "automatic"])
+        opts, args = getopt.getopt(argv, "hs:e:a", ["help", "solver=", "example=", "automatic"])
     except getopt.GetoptError:
-        print("[INFO] Usage: python script.py\n\
-                                [-h/--help]\n\
-                                [-d/--debug]\n\
-                                [-a/--automatic]\n")
+        usage()
         sys.exit(1)
+
     for opt, arg in opts:
         if opt in ("-h", "--help"):
-            print("[INFO] Usage: python script.py\n\
-                                [-h/--help]\n\
-                                [-d/--debug]\n\
-                                [-a/--automatic]\n")
+            usage()
             sys.exit(0)
-        elif opt in ("-d", "--debug"):
-            debug = True
+
         elif opt in ("-a", "--automatic"):
             automatic = True
-    return debug, automatic
+
+        elif opt in ("-s", "--solver"):
+            if "pmc" == arg:
+                solver = "pmc"
+            elif "maple" == arg:
+                solver = "maple"
+            elif "mapleLRB" == arg:
+                solver = "mapleLRB"
+            elif "glucose+" == arg:
+                solver = "glucose+"
+            elif "comsps" == arg:
+                solver = "comsps"
+
+        elif opt in ("-e", "--example"):
+            example = arg
+
+    if solver == "" and example == "" and automatic == False:
+        print("[ERROR] Solver and example are mandatory arguments")
+        print("[ERROR] EXITING...")
+        sys.exit(1)
+
+    return solver, example, automatic
 
 
 # Function to verify if the example file exists
@@ -174,6 +197,8 @@ def execute(solverPath, example):
 
     #Seventh extract metrics like smallest ddnnf, time, memory ...
     #The another script, here it only saves the results in a format csv, log, ...
+    #ddnnfCountCmd()
+    #ddnnfCountCmd()
 
 
 # Main function
@@ -186,15 +211,23 @@ def main():
 
     solverChoice = ""
     example = ""
-    debug = False
     automatic = False
 
     # Parse command-line arguments
-    if len(sys.argv) == 3:
-        solverChoice = int(sys.argv[1])
-        example = str(sys.argv[2])
-    else:
-        debug, automatic = getargs(sys.argv[1:])
+    solverChoice, example, automatic = getargs(sys.argv[1:])
+    print(solverChoice)
+    print(example)
+    print(automatic)
+
+    if solverChoice not in SOLVERS:
+        print("[ERROR] Provide correct solver.")
+        print("[ERROR] EXITING...")
+        sys.exit(1)
+
+    if not exampleExists(example):
+        print("[ERROR] Example not found.")
+        print("[ERROR] EXITING...")
+        sys.exit(1)
 
     # Create output directory if it does not exist
     if not os.path.exists(OUTPUT_PATH):
@@ -207,56 +240,16 @@ def main():
         for s in SOLVERS:
             for t in tests:
                 print(f"[INFO] Processing example: {t} SAT: {os.path.basename(SOLVERS[s])}")
-                execute(SOLVERS[s], t, debug, vivification)
+                execute(SOLVERS[s], t)
         print("[INFO] Proccess finished without errors")
         print("[INFO] EXITING...")
-    # Manual mode: Use args or ask user for input
+    # Manual mode
     else:
-        if len(sys.argv) == 3:
-            if solverChoice not in SOLVERS:
-                print("[ERROR] Invalid choice.")
-                print("[ERROR] EXITING...")
-                sys.exit(1)
-            if not exampleExists(example):
-                print("[ERROR] Example not found.")
-                print("[ERROR] EXITING...")
-                sys.exit(1)
-            execute(SOLVERS[solverChoice], example)
-            print("[INFO] Proccess finished without errors")
-            print("[INFO] EXITING...")
-        else:
-            while True:
-                # Display solver options
-                print("[INFO] Choose a SAT solver: ")
-                print("0 - EXIT")
-                for key, value in SOLVERS.items():
-                    print(f"{key} - {value.split('/')[5]}")
-
-                # Prompt user to choose a solver
-                #try:
-                solverChoice = int(input("(1-5): "))
-                #except:
-                #    print("[ERROR] Invalid choice, please try again.")
-                #    continue
-
-                if solverChoice == 0:
-                    print("\n[INFO] EXITING...")
-                    sys.exit(0)
-
-                if solverChoice not in SOLVERS:
-                    print("[ERROR] Invalid choice, please try again.")
-                    continue
-
-                # Prompt user to enter the name of the example file
-                example = input("[INFO] Enter the name of the example: ")
-
-                if not exampleExists(example):
-                    print("[ERROR] Example not found.")
-                    continue
-
-                # Execute the chosen solver on the specified example
-                execute(SOLVERS[solverChoice], example)
-                print("[INFO] Proccess finished without errors")
+        # Execute the chosen solver on the specified example
+        print(f"[INFO] Processing example {example} with solver {solverChoice}")
+        print()
+        execute(SOLVERS[solverChoice], example)
+        print("[INFO] Proccess finished without errors")
 
 
 # Entry point of the script

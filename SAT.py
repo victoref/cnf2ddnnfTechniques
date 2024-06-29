@@ -49,10 +49,10 @@ def signalHandler(sig, frame):
 
 
 def checkBASEDIR(path):
-    myFolders = os.listdir(path)
     if os.path.basename(path) != "scripts":
         print("[ERROR] Please execute the scripts in its specific folder")
         sys.exit(1)
+
 
 def usage():
     print("[INFO] Usage: python script.py\n\
@@ -61,6 +61,7 @@ def usage():
                                 [-e <example> / --example <example>]\n\
                                 [-a / --automatic]")
     print("[INFO] List of solvers [pmc, maple, mapleLRB, glucose+, comsps]")
+
 
 # Function to get command-line arguments
 def getargs(argv):
@@ -167,7 +168,11 @@ def execute(solverPath, example):
     Executes the specified SAT solver on a given example file and logs the output.
     """
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    solverName = solverPath.split('/')[5]
+
+    pSplited = solverPath.split('/')
+    index = pSplited.index("programs")
+    solverName = pSplited[(index + 1)]
+
     logFile = f"{OUTPUT_PATH}/{solverName}_{example}_{timestamp}.log"
 
     #First vivify the cnf with desired mechanism
@@ -215,9 +220,6 @@ def main():
 
     # Parse command-line arguments
     solverChoice, example, automatic = getargs(sys.argv[1:])
-    print(solverChoice)
-    print(example)
-    print(automatic)
 
     if solverChoice not in SOLVERS:
         print("[ERROR] Provide correct solver.")

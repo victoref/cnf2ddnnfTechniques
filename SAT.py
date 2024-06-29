@@ -134,31 +134,35 @@ def vivifyCmd(solverPath, solverName, example, logFile, varElimination=False):
 
     else:
         cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={OUTPUT_PATH}/vivified_{solverName}_{example} {EXAMPLES_PATH}/{example}"
-        cmd += f"| grep \"CPU time\" | awk '{{print \"Vivify: \" $5}}' > {logFile}"
-        #cmd += f"; grep \"CPU time\" {OUTPUT_PATH}/vivified_{solverName}_{example} | awk '{{print \"Vivify: \" $5}}' > {logFile}"
+        cmd += f"| grep \"CPU time\" | awk '{{print $5}}' |  tr '\n' ';' >> {logFile}"
     os.system(cmd)
 
 
 def cnf2dDNNFCmd(example, vivified, solverName=""):
     if vivified:
-        cmd = f"{C2D_PATH} -in {example} -dt_count 50 -smooth_all -count -cache_size 10 -nnf_block_size 50 | tee -a {OUTPUT_PATH}/c2d_{os.path.basename(example).split('.')[0]}.log"
+        cmd = f"{C2D_PATH} -in {OUTPUT_PATH}/{example} -dt_count 50 -smooth_all -count -cache_size 10 -nnf_block_size 50 | tee -a {OUTPUT_PATH}/c2d_{example}.log"
     else:
-        cmd = f"{C2D_PATH} -in {example} -dt_count 50 -smooth_all -count -cache_size 10 -nnf_block_size 50 | tee -a {OUTPUT_PATH}/c2d_{solverName}_{os.path.basename(example).split('.')[0]}.log"
+        cmd = f"{C2D_PATH} -in {EXAMPLES_PATH}/{example} -dt_count 50 -smooth_all -count -cache_size 10 -nnf_block_size 50 | tee -a {OUTPUT_PATH}/c2d_{solverName}_{example}.log"
     os.system(cmd)
 
 
-def grepTimeInOutput(output, logFile):
-    cmd = f"grep \"Time\" {output} | sed -e 's/s \\/ /\\n/g' -e 's/s$//g' >> {logFile}"
+def grepTimeInOutput(output, logFile, deleteFile):
+    cmd = f"grep \"Compile Time\" {output} | sed -E 's/Compile Time: ([^s]+)s \\/ Pre-Processing: ([^s]+)s \\/ Post-Processing: ([^s]+)s/\\1;\\2;\\3/' |  tr '\n' ';' >> {logFile}"
     os.system(cmd)
+    cmd = f"grep \"Total Time\" {output} | sed -E 's/Total Time: ([^s]+)s/\\1/' |  tr '\n' ';' >> {logFile}"
+    os.system(cmd)
+    if deleteFile:
+        cmd = f"rm -f {output}"
+        os.system(cmd)
 
 
 def cnfCountCmd(example, logFile):
-    cmd = f"{D4_PATH} -mc {example} 2>&1 | grep \"^s\" | awk '{{print \"CNF worlds: \" $2}}' >> {logFile}"
+    cmd = f"{D4_PATH} -mc {example} 2>&1 | grep \"^s\" | sed -e 's/^s //g' | tr '\n' ';' >> {logFile}"
     os.system(cmd)
 
 
 def ddnnfCountCmd(example, logFile):
-    cmd = f"{dREASONER_PATH} | awk '{{print \"dDNNF worlds: \" $2}}' >> {logFile}"
+    cmd = f"{dREASONER_PATH} |  tr '\n' ';' >> {logFile}"
     os.system(cmd)
 
 
@@ -175,11 +179,14 @@ def execute(solverPath, example):
 
     logFile = f"{OUTPUT_PATH}/{solverName}_{example}_{timestamp}.log"
 
+    #command = f"echo \"Vivify-Time;OGCNF worlds;VIVCNF worlds;Vivified Compile Time;Vivified Pre-Processing;Vivified Post-Processing;Vivified Total Time;Compile Time;Pre-Processing;Post-Processing;Total Time\" > {logFile}"
+    #os.system(command)
+
     #First vivify the cnf with desired mechanism
     vivifyCmd(solverPath, solverName, f"{example}", logFile)
 
     if os.path.basename(solverPath) == "pmc":
-        command = f"grep \"CPU time\" {OUTPUT_PATH}/vivified_{solverName}_{example} | awk '{{print \"Vivify: \" $5}}' > {logFile}"
+        command = f"grep \"CPU time\" {OUTPUT_PATH}/vivified_{solverName}_{example} | awk '{{print $5}}' |  tr '\n' ';' >> {logFile}"
         os.system(command)
 
     #Second count the number of solutions of the original cnf
@@ -189,12 +196,12 @@ def execute(solverPath, example):
     cnfCountCmd(f"{OUTPUT_PATH}/vivified_{solverName}_{example}", logFile)
 
     #Fourth convert vivified cnf to dDNNF
-    cnf2dDNNFCmd(f"{OUTPUT_PATH}/vivified_{solverName}_{example}", True)
-    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_vivified_{solverName}_{example.split('.')[0]}.log", logFile)
+    cnf2dDNNFCmd(f"vivified_{solverName}_{example}", True)
+    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_vivified_{solverName}_{example}.log", logFile, True)
 
     #Fifth convert original cnf to dDNNF
-    cnf2dDNNFCmd(f"{EXAMPLES_PATH}/{example}", False, solverName)
-    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_{solverName}_{example.split('.')[0]}.log", logFile)
+    cnf2dDNNFCmd(example, False, solverName)
+    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_{solverName}_{example}.log", logFile, True)
 
     #Sixth move original.nnf to result folder
     command = f"mv {EXAMPLES_PATH}/{example}.nnf {OUTPUT_PATH}/"

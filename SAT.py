@@ -5,7 +5,6 @@
 #              SAT: VIVIFICACIÓN
 #############################################################
 import os
-import numpy as np
 import getopt
 import sys
 import signal

@@ -122,11 +122,9 @@ def vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile, varElim
     Constructs the command to execute a SAT solver based on its path and vivification option.
     Currently, this function is not fully implemented.
     """
-    eliminationFlag = ""
+    eliminationFlag = "-no-elim"
     if varElimination:
         eliminationFlag = "-elim"
-    else:
-        eliminationFlag = "-no-elim"
 
     cmd = ""
     if os.path.basename(solverPath) == "pmc":
@@ -234,12 +232,12 @@ def main():
     solverChoice, example, automatic = getargs(sys.argv[1:])
 
     if solverChoice not in SOLVERS:
-        print("[ERROR] Provide correct solver.")
+        print("[ERROR] Provide correct solver")
         print("[ERROR] EXITING...")
         sys.exit(1)
 
     if not exampleExists(example):
-        print("[ERROR] Example not found.")
+        print("[ERROR] Example not found")
         print("[ERROR] EXITING...")
         sys.exit(1)
 
@@ -255,7 +253,7 @@ def main():
             for t in tests:
                 print(f"[INFO] Processing example: {t} SAT: {os.path.basename(SOLVERS[s])}")
                 execute(SOLVERS[s], t)
-        print("[INFO] Proccess finished without errors")
+        print("[INFO] Process finished without errors")
         print("[INFO] EXITING...")
     # Manual mode
     else:
@@ -263,7 +261,7 @@ def main():
         print(f"[INFO] Processing example {example} with solver {solverChoice}")
         print()
         execute(SOLVERS[solverChoice], example)
-        print("[INFO] Proccess finished without errors")
+        print("[INFO] Process finished without errors")
 
 
 # Entry point of the script

@@ -117,7 +117,7 @@ def exampleExists(example):
     return os.path.isfile(os.path.join(EXAMPLES_PATH, example))
 
 
-def vivifyCmd(solverPath, solverName, example, logFile, varElimination=False):
+def vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile, varElimination=False):
     """
     Constructs the command to execute a SAT solver based on its path and vivification option.
     Currently, this function is not fully implemented.
@@ -130,10 +130,10 @@ def vivifyCmd(solverPath, solverName, example, logFile, varElimination=False):
 
     cmd = ""
     if os.path.basename(solverPath) == "pmc":
-        cmd = f"{solverPath} -verb=1 -vivification {EXAMPLES_PATH}/{example} | tee -a {OUTPUT_PATH}/vivified_{solverName}_{example}"
+        cmd = f"{solverPath} -verb=1 -vivification {EXAMPLES_PATH}/{example} | tee -a {OUTPUT_PATH}/{vivifiedExample}"
 
     else:
-        cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={OUTPUT_PATH}/vivified_{solverName}_{example} {EXAMPLES_PATH}/{example}"
+        cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={OUTPUT_PATH}/{vivifiedExample} {EXAMPLES_PATH}/{example}"
         cmd += f"| grep \"CPU time\" | awk '{{print $5}}' |  tr '\n' ';' >> {logFile}"
     os.system(cmd)
 
@@ -179,24 +179,29 @@ def execute(solverPath, example):
 
     logFile = f"{OUTPUT_PATH}/{solverName}_{example}_{timestamp}.log"
 
-    #command = f"echo \"Vivify-Time;OGCNF worlds;VIVCNF worlds;Vivified Compile Time;Vivified Pre-Processing;Vivified Post-Processing;Vivified Total Time;Compile Time;Pre-Processing;Post-Processing;Total Time\" > {logFile}"
+    vivifiedExample = f"vivified_{solverName}_{example}"
+
+    #command = f"echo \"SATsolver;Example;Vivify-Time;OGCNF worlds;VIVCNF worlds;Vivified Compile Time;Vivified Pre-Processing;Vivified Post-Processing;Vivified Total Time;Compile Time;Pre-Processing;Post-Processing;Total Time\" > {logFile}"
     #os.system(command)
 
+    command = f"echo \"{solverName};{example};\" | tr '\n' ';' > {logFile}"
+    os.system(command)
+
     #First vivify the cnf with desired mechanism
-    vivifyCmd(solverPath, solverName, f"{example}", logFile)
+    vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile)
 
     if os.path.basename(solverPath) == "pmc":
-        command = f"grep \"CPU time\" {OUTPUT_PATH}/vivified_{solverName}_{example} | awk '{{print $5}}' |  tr '\n' ';' >> {logFile}"
+        command = f"grep \"CPU time\" {OUTPUT_PATH}/{vivifiedExample} | awk '{{print $5}}' |  tr '\n' ';' >> {logFile}"
         os.system(command)
 
     #Second count the number of solutions of the original cnf
     cnfCountCmd(f"{EXAMPLES_PATH}/{example}", logFile)
 
     #Third count the number of solutions of the vivified cnf
-    cnfCountCmd(f"{OUTPUT_PATH}/vivified_{solverName}_{example}", logFile)
+    cnfCountCmd(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
 
     #Fourth convert vivified cnf to dDNNF
-    cnf2dDNNFCmd(f"vivified_{solverName}_{example}", True)
+    cnf2dDNNFCmd(f"{vivifiedExample}", True)
     grepTimeInOutput(f"{OUTPUT_PATH}/c2d_vivified_{solverName}_{example}.log", logFile, True)
 
     #Fifth convert original cnf to dDNNF

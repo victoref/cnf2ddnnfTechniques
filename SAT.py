@@ -136,6 +136,15 @@ def vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile, varElim
     os.system(cmd)
 
 
+def grepTimeInVivification(example, logFile, deleteFile):
+    command = f"grep \"CPU time\" {example} | awk '{{print $5}}' | tr '\n' ';' >> {logFile}"
+    os.system(command)
+
+    if deleteFile:
+        command = f"rm -f {example}"
+        os.system(command)
+
+
 def cnf2dDNNFCmd(example, vivified, solverName=""):
     if vivified:
         cmd = f"{C2D_PATH} -in {OUTPUT_PATH}/{example} -dt_count 50 -smooth_all -count -cache_size 10 -nnf_block_size 50 | tee -a {OUTPUT_PATH}/c2d_{example}.log"
@@ -187,10 +196,10 @@ def execute(solverPath, example):
 
     #First vivify the cnf with desired mechanism
     vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile)
-
     if os.path.basename(solverPath) == "pmc":
-        command = f"grep \"CPU time\" {OUTPUT_PATH}/{vivifiedExample} | awk '{{print $5}}' |  tr '\n' ';' >> {logFile}"
-        os.system(command)
+        grepTimeInVivification(f"{OUTPUT_PATH}/{vivifiedExample}", logFile, False)
+    else:
+        grepTimeInVivification(f"{OUTPUT_PATH}/{vivifiedExample}_aux.log", logFile, True)
 
     #Second count the number of solutions of the original cnf
     cnfCountCmd(f"{EXAMPLES_PATH}/{example}", logFile)

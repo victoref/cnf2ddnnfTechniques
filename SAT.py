@@ -144,7 +144,7 @@ def cnf2dDNNFCmd(example, vivified, solverName=""):
     os.system(cmd)
 
 
-def grepTimeInOutput(output, logFile, deleteFile):
+def grepTimeInC2D(output, logFile, deleteFile):
     cmd = f"grep \"Compile Time\" {output} | sed -E 's/Compile Time: ([^s]+)s \\/ Pre-Processing: ([^s]+)s \\/ Post-Processing: ([^s]+)s/\\1;\\2;\\3/' |  tr '\n' ';' >> {logFile}"
     os.system(cmd)
     cmd = f"grep \"Total Time\" {output} | sed -E 's/Total Time: ([^s]+)s/\\1/' |  tr '\n' ';' >> {logFile}"
@@ -200,11 +200,11 @@ def execute(solverPath, example):
 
     #Fourth convert vivified cnf to dDNNF
     cnf2dDNNFCmd(f"{vivifiedExample}", True)
-    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_vivified_{solverName}_{example}.log", logFile, True)
+    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_vivified_{solverName}_{example}.log", logFile, True)
 
     #Fifth convert original cnf to dDNNF
     cnf2dDNNFCmd(example, False, solverName)
-    grepTimeInOutput(f"{OUTPUT_PATH}/c2d_{solverName}_{example}.log", logFile, True)
+    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{example}.log", logFile, True)
 
     #Sixth move original.nnf to result folder
     command = f"mv {EXAMPLES_PATH}/{example}.nnf {OUTPUT_PATH}/"

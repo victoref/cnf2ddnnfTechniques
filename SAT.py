@@ -128,12 +128,11 @@ def vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile, varElim
         eliminationFlag = "-elim"
 
     cmd = ""
-    if os.path.basename(solverPath) == "pmc":
+    if solverName == "pmc":
         cmd = f"{solverPath} -verb=1 -vivification {EXAMPLES_PATH}/{example} | tee -a {OUTPUT_PATH}/{vivifiedExample}"
 
     else:
-        cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={OUTPUT_PATH}/{vivifiedExample} {EXAMPLES_PATH}/{example}"
-        cmd += f"| grep \"CPU time\" | awk '{{print $5}}' |  tr '\n' ';' >> {logFile}"
+        cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={OUTPUT_PATH}/{vivifiedExample} {EXAMPLES_PATH}/{example}  | tee -a {OUTPUT_PATH}/{vivifiedExample}_aux.log"
     os.system(cmd)
 
 

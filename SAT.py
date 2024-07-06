@@ -8,6 +8,7 @@ import os
 import getopt
 import sys
 import signal
+import subprocess
 from datetime import datetime
 
 # Constants
@@ -41,6 +42,7 @@ SOLVERS = {
 
 PID=os.getpid()
 
+TIMEOUT_C2D = 1200
 
 def signalHandler(sig, frame):
     print("\n[INFO] EXITING...")
@@ -144,12 +146,31 @@ def grepTimeInVivification(example, logFile, deleteFile):
         os.system(command)
 
 
-def cnf2dDNNFCmd(example, vivified, solverName=""):
-    if vivified:
-        cmd = f"{C2D_PATH} -in {OUTPUT_PATH}/{example} -dt_count 50 -smooth_all -count -cache_size 10 -nnf_block_size 50 | tee -a {OUTPUT_PATH}/c2d_{example}.log"
-    else:
-        cmd = f"{C2D_PATH} -in {EXAMPLES_PATH}/{example} -dt_count 50 -smooth_all -count -cache_size 10 -nnf_block_size 50 | tee -a {OUTPUT_PATH}/c2d_{solverName}_{example}.log"
-    os.system(cmd)
+def cnf2dDNNFCmd(example, vivified, logFile, solverName=""):
+    try:
+        inArg = ""
+        outputArg = ""
+        if vivified:
+            inArg = f"{OUTPUT_PATH}/{example}"
+            outputArg = f"{OUTPUT_PATH}/c2d_{example}.log"
+        else:
+            inArg = f"{EXAMPLES_PATH}/{example}"
+            outputArg = f"{OUTPUT_PATH}/c2d_{solverName}_{PID}_{example}.log"
+
+        cmd = [
+            C2D_PATH,
+            "-in", inArg,
+            "-dt_count", "50",
+            "-smooth_all",
+            "-count",
+            "-cache_size", "10",
+            "-nnf_block_size", "50"
+        ]
+        with open(outputArg, "a") as sOutFile:
+            subprocess.run(cmd, stdout=sOutFile, timeout=TIMEOUT_C2D)
+    except subprocess.TimeoutExpired:
+        command = f"echo \"TIMEOUT;-;-;-\" | tr '\n' ';' >> {logFile}"
+        os.system(command)
 
 
 def grepTimeInC2D(output, logFile, deleteFile):
@@ -183,14 +204,14 @@ def execute(solverPath, example):
     index = pSplited.index("programs")
     solverName = pSplited[(index + 1)]
 
-    logFile = f"{OUTPUT_PATH}/{solverName}_{example}_{timestamp}.log"
+    logFile = f"{OUTPUT_PATH}/{solverName}_{PID}_{example}_{timestamp}.log"
 
-    vivifiedExample = f"vivified_{solverName}_{example}"
+    vivifiedExample = f"vivified_{solverName}_{PID}_{example}"
 
     #command = f"echo \"SATsolver;Example;Vivify-Time;OGCNF worlds;VIVCNF worlds;Vivified Compile Time;Vivified Pre-Processing;Vivified Post-Processing;Vivified Total Time;Compile Time;Pre-Processing;Post-Processing;Total Time\" > {logFile}"
     #os.system(command)
 
-    command = f"echo \"{solverName};{example};\" | tr '\n' ';' > {logFile}"
+    command = f"echo \"{solverName};{example}\" | tr '\n' ';' > {logFile}"
     os.system(command)
 
     #First vivify the cnf with desired mechanism
@@ -207,21 +228,24 @@ def execute(solverPath, example):
     cnfCountCmd(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
 
     #Fourth convert vivified cnf to dDNNF
-    cnf2dDNNFCmd(f"{vivifiedExample}", True)
-    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_vivified_{solverName}_{example}.log", logFile, True)
+    cnf2dDNNFCmd(f"{vivifiedExample}", True, logFile)
+    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{vivifiedExample}.log", logFile, True)
 
     #Fifth convert original cnf to dDNNF
-    cnf2dDNNFCmd(example, False, solverName)
-    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{example}.log", logFile, True)
+    cnf2dDNNFCmd(example, False, logFile, solverName)
+    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{PID}_{example}.log", logFile, True)
 
     #Sixth move original.nnf to result folder
-    command = f"mv {EXAMPLES_PATH}/{example}.nnf {OUTPUT_PATH}/"
+    command = f"mv {EXAMPLES_PATH}/{example}.nnf {OUTPUT_PATH}/{PID}_{example}.nnf"
     os.system(command)
 
     #Seventh extract metrics like smallest ddnnf, time, memory ...
     #The another script, here it only saves the results in a format csv, log, ...
     #ddnnfCountCmd()
     #ddnnfCountCmd()
+
+    command = f"echo \"\" >> {logFile}"
+    os.system(command)
 
 
 # Main function

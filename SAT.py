@@ -144,10 +144,10 @@ def vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile, varElim
 
     cmd = ""
     if solverName == "pmc":
-        cmd = f"{solverPath} -verb=1 -vivification {EXAMPLES_PATH}/{example} | tee -a {OUTPUT_PATH}/{vivifiedExample}"
+        cmd = f"{solverPath} -verb=1 -vivification {example} | tee -a {vivifiedExample}"
 
     else:
-        cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={OUTPUT_PATH}/{vivifiedExample} {EXAMPLES_PATH}/{example}  | tee -a {OUTPUT_PATH}/{vivifiedExample}_aux.log"
+        cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={vivifiedExample} {example}  | tee -a {vivifiedExample}_aux.log"
     os.system(cmd)
 
 
@@ -233,7 +233,7 @@ def execute(solverPath, example):
     cnfCountCmd(f"{EXAMPLES_PATH}/{example}", logFile)
 
     #Third vivify the cnf with desired mechanism
-    vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile)
+    vivifyCmd(solverPath, solverName, f"{EXAMPLES_PATH}/{example}", f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
     if os.path.basename(solverPath) == "pmc":
         grepTimeInVivification(f"{OUTPUT_PATH}/{vivifiedExample}", logFile, False)
     else:

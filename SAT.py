@@ -118,6 +118,21 @@ def exampleExists(example):
     return os.path.isfile(os.path.join(EXAMPLES_PATH, example))
 
 
+def getVarsandClauses(example, logFile):
+    numVars = 0
+    numClauses = 0
+    with open(example, 'r') as f:
+        for l in f:
+            if l.startswith('p cnf'):
+                parts = l.split()
+                numVars = int(parts[2])
+                numClauses = int(parts[3])
+
+    with open(logFile, 'a') as f:
+                f.write(f"{numVars};{numClauses};")
+
+    return numVars, numClauses
+
 def vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile, varElimination=False):
     """
     Constructs the command to execute a SAT solver based on its path and vivification option.
@@ -173,8 +188,6 @@ def cnf2dDNNFCmd(example, vivified, logFile, solverName=""):
 
 
 def grepTimeInC2D(output, logFile, deleteFile):
-    cmd = f"grep \"Compile Time\" {output} | sed -E 's/Compile Time: ([^s]+)s \\/ Pre-Processing: ([^s]+)s \\/ Post-Processing: ([^s]+)s/\\1;\\2;\\3/' |  tr '\n' ';' >> {logFile}"
-    os.system(cmd)
     cmd = f"grep \"Total Time\" {output} | sed -E 's/Total Time: ([^s]+)s/\\1/' |  tr '\n' ';' >> {logFile}"
     os.system(cmd)
     if deleteFile:
@@ -207,39 +220,46 @@ def execute(solverPath, example):
 
     vivifiedExample = f"vivified_{solverName}_{PID}_{example}"
 
-    #command = f"echo \"SATsolver;Example;Vivify-Time;OGCNF worlds;VIVCNF worlds;Vivified Compile Time;Vivified Pre-Processing;Vivified Post-Processing;Vivified Total Time;Compile Time;Pre-Processing;Post-Processing;Total Time\" > {logFile}"
+    #SATsolver;Example;Vivification;Backbone;#vars OGCNF;#clau OGCNF;OGCNF worlds;Vivify-Time;#vars VIVCNF;#clau VIVCNF;VIVCNF worlds;Same worlds;CNF2dDNNF Time;VivCNF2dDNNF Time;OGdDNNF worlds;VIVdDNNF worlds;
     #os.system(command)
 
-    command = f"echo \"{solverName};{example}\" | tr '\n' ';' > {logFile}"
+    command = f"echo \"{solverName};{example};TRUE;FALSE\" | tr '\n' ';' > {logFile}"
     os.system(command)
 
-    #First vivify the cnf with desired mechanism
+    #First extract the numbaer of vars & clauses of the original cnf
+    getVarsandClauses(f"{EXAMPLES_PATH}/{example}", logFile)
+
+    #Second count the number of solutions of the original cnf
+    cnfCountCmd(f"{EXAMPLES_PATH}/{example}", logFile)
+
+    #Third vivify the cnf with desired mechanism
     vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile)
     if os.path.basename(solverPath) == "pmc":
         grepTimeInVivification(f"{OUTPUT_PATH}/{vivifiedExample}", logFile, False)
     else:
         grepTimeInVivification(f"{OUTPUT_PATH}/{vivifiedExample}_aux.log", logFile, True)
 
-    #Second count the number of solutions of the original cnf
-    cnfCountCmd(f"{EXAMPLES_PATH}/{example}", logFile)
+    #Fourth count the number of solutions of the vivified cnf
+    getVarsandClauses(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
 
-    #Third count the number of solutions of the vivified cnf
+    #Fifth count the number of solutions of the vivified cnf
     cnfCountCmd(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
 
-    #Fourth convert vivified cnf to dDNNF
+    #Sixth convert vivified cnf to dDNNF
     cnf2dDNNFCmd(f"{vivifiedExample}", True, logFile)
     grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{vivifiedExample}.log", logFile, True)
 
-    #Fifth convert original cnf to dDNNF
+    #TODO Same solutions OG CNF - VIV CNF
+
+    #Seventh convert original cnf to dDNNF
     cnf2dDNNFCmd(example, False, logFile, solverName)
     grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{PID}_{example}.log", logFile, True)
 
-    #Sixth move original.nnf to result folder
+    #Eighth move original.nnf to result folder
     command = f"mv {EXAMPLES_PATH}/{example}.nnf {OUTPUT_PATH}/{PID}_{example}.nnf"
     os.system(command)
 
-    #Seventh extract metrics like smallest ddnnf, time, memory ...
-    #The another script, here it only saves the results in a format csv, log, ...
+    #TODO Ninth count OG dDNNF - VIV dDNNF
     #ddnnfCountCmd()
     #ddnnfCountCmd()
 

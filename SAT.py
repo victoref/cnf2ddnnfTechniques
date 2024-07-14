@@ -166,8 +166,7 @@ def grepTimeInVivification(example, logFile, deleteFile):
     os.system(command)
 
     if deleteFile:
-        command = f"rm -f {example}"
-        os.system(command)
+        os.remove(example)
 
 
 def cnf2dDNNFCmd(example, vivified, logFile, solverName=""):
@@ -205,7 +204,7 @@ def grepTimeInC2D(output, logFile, deleteFile):
         os.system(cmd)
 
 
-def cnfCountCmd(example, logFile):
+def cnfCountWorlds(example, logFile):
     d4Cmd = [D4_PATH, '-mc', example]
     worlds = None
 
@@ -253,9 +252,9 @@ def execute(solverPath, example):
     getVarsandClauses(f"{EXAMPLES_PATH}/{example}", logFile)
 
     #Second count the number of solutions of the original cnf
-    OGworlds = cnfCountCmd(f"{EXAMPLES_PATH}/{example}", logFile)
+    OGworlds = cnfCountWorlds(f"{EXAMPLES_PATH}/{example}", logFile)
 
-    #Third vivify the cnf with desired mechanism
+    #Third vivify the cnf with desired mechanism TODO ADD D4 to vivification process
     vivifyCmd(solverPath, solverName, f"{EXAMPLES_PATH}/{example}", f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
     if os.path.basename(solverPath) == "pmc":
         grepTimeInVivification(f"{OUTPUT_PATH}/{vivifiedExample}", logFile, False)
@@ -266,22 +265,21 @@ def execute(solverPath, example):
     getVarsandClauses(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
 
     #Fifth count the number of solutions of the vivified cnf
-    VIVworlds = cnfCountCmd(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
+    VIVworlds = cnfCountWorlds(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
 
     #Sixth same solutions OG CNF - VIV CNF
     compareWorlds(OGworlds, VIVworlds, logFile)
 
-    #Seventh convert original cnf to dDNNF
+    #Seventh convert original cnf to dDNNF TODO CAN BE DONE EVEN WITH D4
     cnf2dDNNFCmd(example, False, logFile, solverName)
     grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{PID}_{example}.log", logFile, True)
 
-    #Eighth convert vivified cnf to dDNNF
+    #Eighth convert vivified cnf to dDNNF TODO CAN BE DONE EVEN WITH D4
     cnf2dDNNFCmd(f"{vivifiedExample}", True, logFile)
     grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{vivifiedExample}.log", logFile, True)
 
     #Ninth move original.nnf to result folder
-    command = f"mv {EXAMPLES_PATH}/{example}.nnf {OUTPUT_PATH}/{PID}_{example}.nnf"
-    os.system(command)
+    os.replace(f"mv {EXAMPLES_PATH}/{example}.nnf", f"{OUTPUT_PATH}/{PID}_{example}.nnf")
 
     #TODO Tenth count OG dDNNF - VIV dDNNF
     #ddnnfCountCmd()

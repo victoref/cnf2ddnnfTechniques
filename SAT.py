@@ -10,6 +10,7 @@ import sys
 import signal
 import subprocess
 from datetime import datetime
+import re
 
 # Constants
 CURR_DIR = os.getenv("PWD")
@@ -43,6 +44,7 @@ SOLVERS = {
 PID=os.getpid()
 
 TIMEOUT_C2D = 1200
+TIMEOUT_D4 = 10000
 
 def signalHandler(sig, frame):
     print("\n[INFO] EXITING...")
@@ -129,9 +131,22 @@ def getVarsandClauses(example, logFile):
                 numClauses = int(parts[3])
 
     with open(logFile, 'a') as f:
-                f.write(f"{numVars};{numClauses};")
+        f.write(f"{numVars};{numClauses};")
 
     return numVars, numClauses
+
+
+def compareWorlds(w1, w2, logFile):
+    sameWs = False
+    if w1 != None and w2 != None:
+        if w1 == w2:
+            sameWs = True
+    with open(logFile, 'a') as f:
+        if sameWs:
+            f.write("TRUE;")
+        else:
+            f.write("FALSE;")
+
 
 def vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile, varElimination=False):
     """
@@ -196,8 +211,21 @@ def grepTimeInC2D(output, logFile, deleteFile):
 
 
 def cnfCountCmd(example, logFile):
-    cmd = f"{D4_PATH} -mc {example} 2>&1 | grep \"^s\" | sed -e 's/^s //g' | tr '\n' ';' >> {logFile}"
-    os.system(cmd)
+    d4Cmd = [D4_PATH, '-mc', example]
+    worlds = None
+
+    try:
+        stepD4 = subprocess.run(d4Cmd, timeout=TIMEOUT_D4, capture_output=True)
+        if stepD4.returncode == 0:
+            with open(logFile, 'a') as f:
+                stdoutD4 = (stepD4.stdout).decode('utf-8')
+                worlds = re.search(r's (\d+)', stdoutD4)
+                f.write(worlds.group(1) + ";")
+    except subprocess.TimeoutExpired:
+        command = f"echo \"TIMEOUT\" | tr '\n' ';' >> {logFile}"
+        os.system(command)
+
+    return worlds.group(1)
 
 
 def ddnnfCountCmd(example, logFile):
@@ -220,17 +248,17 @@ def execute(solverPath, example):
 
     vivifiedExample = f"vivified_{solverName}_{PID}_{example}"
 
-    #SATsolver;Example;Vivification;Backbone;#vars OGCNF;#clau OGCNF;OGCNF worlds;Vivify-Time;#vars VIVCNF;#clau VIVCNF;VIVCNF worlds;Same worlds;CNF2dDNNF Time;VivCNF2dDNNF Time;OGdDNNF worlds;VIVdDNNF worlds;
+    #SATsolver;Example;Vivification;Backbone;#vars OGCNF;#clau OGCNF;OGCNF worlds;Vivify-Time;#vars VIVCNF;#clau VIVCNF;VIVCNF worlds;Same worlds;OGCNF2dDNNF Time;VIVCNF2dDNNF Time;OGdDNNF worlds;VIVdDNNF worlds;
     #os.system(command)
 
     command = f"echo \"{solverName};{example};TRUE;FALSE\" | tr '\n' ';' > {logFile}"
     os.system(command)
 
-    #First extract the numbaer of vars & clauses of the original cnf
+    #First extract the number of vars & clauses of the original cnf
     getVarsandClauses(f"{EXAMPLES_PATH}/{example}", logFile)
 
     #Second count the number of solutions of the original cnf
-    cnfCountCmd(f"{EXAMPLES_PATH}/{example}", logFile)
+    OGworlds = cnfCountCmd(f"{EXAMPLES_PATH}/{example}", logFile)
 
     #Third vivify the cnf with desired mechanism
     vivifyCmd(solverPath, solverName, f"{EXAMPLES_PATH}/{example}", f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
@@ -239,27 +267,28 @@ def execute(solverPath, example):
     else:
         grepTimeInVivification(f"{OUTPUT_PATH}/{vivifiedExample}_aux.log", logFile, True)
 
-    #Fourth count the number of solutions of the vivified cnf
+    #Fourth extract the number of vars & clauses of the vivified cnf
     getVarsandClauses(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
 
     #Fifth count the number of solutions of the vivified cnf
-    cnfCountCmd(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
+    VIVworlds = cnfCountCmd(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
 
-    #Sixth convert vivified cnf to dDNNF
-    cnf2dDNNFCmd(f"{vivifiedExample}", True, logFile)
-    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{vivifiedExample}.log", logFile, True)
-
-    #TODO Same solutions OG CNF - VIV CNF
+    #Sixth same solutions OG CNF - VIV CNF
+    compareWorlds(OGworlds, VIVworlds, logFile)
 
     #Seventh convert original cnf to dDNNF
     cnf2dDNNFCmd(example, False, logFile, solverName)
     grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{PID}_{example}.log", logFile, True)
 
-    #Eighth move original.nnf to result folder
+    #Eighth convert vivified cnf to dDNNF
+    cnf2dDNNFCmd(f"{vivifiedExample}", True, logFile)
+    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{vivifiedExample}.log", logFile, True)
+
+    #Ninth move original.nnf to result folder
     command = f"mv {EXAMPLES_PATH}/{example}.nnf {OUTPUT_PATH}/{PID}_{example}.nnf"
     os.system(command)
 
-    #TODO Ninth count OG dDNNF - VIV dDNNF
+    #TODO Tenth count OG dDNNF - VIV dDNNF
     #ddnnfCountCmd()
     #ddnnfCountCmd()
 

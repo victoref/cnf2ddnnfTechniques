@@ -61,22 +61,20 @@ def usage():
     print("[INFO] Usage: python script.py\n\
                                 [-h / --help]\n\
                                 [-s <solver> / --solver <solver>]\n\
-                                [-e <example> / --example <example>]\n\
-                                [-a / --automatic]")
+                                [-e <example> / --example <example>]")
     print("[INFO] List of solvers [pmc, maple, mapleLRB, glucose+, comsps]")
 
 
 # Function to get command-line arguments
 def getargs(argv):
     """
-    Parses command-line arguments to determine debug mode, automatic execution, and vivification option.
+    Parses command-line arguments to determine debug mode and vivification option.
     """
     solver = ""
     example = ""
-    automatic = False
 
     try:
-        opts, args = getopt.getopt(argv, "hs:e:a", ["help", "solver=", "example=", "automatic"])
+        opts, args = getopt.getopt(argv, "hs:e:", ["help", "solver=", "example="])
     except getopt.GetoptError:
         usage()
         sys.exit(1)
@@ -85,9 +83,6 @@ def getargs(argv):
         if opt in ("-h", "--help"):
             usage()
             sys.exit(0)
-
-        elif opt in ("-a", "--automatic"):
-            automatic = True
 
         elif opt in ("-s", "--solver"):
             if "pmc" == arg:
@@ -104,12 +99,12 @@ def getargs(argv):
         elif opt in ("-e", "--example"):
             example = arg
 
-    if solver == "" and example == "" and automatic == False:
+    if solver == "" and example == "":
         print("[ERROR] Solver and example are mandatory arguments")
         print("[ERROR] EXITING...")
         sys.exit(1)
 
-    return solver, example, automatic
+    return solver, example
 
 
 # Function to verify if the example file exists
@@ -198,8 +193,8 @@ def cnf2dDNNFCmd(example, vivified, logFile, solverName=""):
         with open(outputArg, "a") as sOutFile:
             subprocess.run(cmd, stdout=sOutFile, timeout=TIMEOUT_C2D)
     except subprocess.TimeoutExpired:
-        command = f"echo \"TIMEOUT;-;-;-\" | tr '\n' ';' >> {logFile}"
-        os.system(command)
+        with open(logFile, "a") as f:
+            f.write("TIMEOUT;-;-;-;")
 
 
 def grepTimeInC2D(output, logFile, deleteFile):
@@ -222,8 +217,8 @@ def cnfCountCmd(example, logFile):
                 worlds = re.search(r's (\d+)', stdoutD4)
                 f.write(worlds.group(1) + ";")
     except subprocess.TimeoutExpired:
-        command = f"echo \"TIMEOUT\" | tr '\n' ';' >> {logFile}"
-        os.system(command)
+        with open(logFile, 'a') as f:
+            f.write("TIMEOUT;")
 
     return worlds.group(1)
 
@@ -251,8 +246,8 @@ def execute(solverPath, example):
     #SATsolver;Example;Vivification;Backbone;#vars OGCNF;#clau OGCNF;OGCNF worlds;Vivify-Time;#vars VIVCNF;#clau VIVCNF;VIVCNF worlds;Same worlds;OGCNF2dDNNF Time;VIVCNF2dDNNF Time;OGdDNNF worlds;VIVdDNNF worlds;
     #os.system(command)
 
-    command = f"echo \"{solverName};{example};TRUE;FALSE\" | tr '\n' ';' > {logFile}"
-    os.system(command)
+    with open(logFile, 'a') as f:
+        f.write(f"{solverName};{example};TRUE;FALSE;")
 
     #First extract the number of vars & clauses of the original cnf
     getVarsandClauses(f"{EXAMPLES_PATH}/{example}", logFile)
@@ -292,24 +287,23 @@ def execute(solverPath, example):
     #ddnnfCountCmd()
     #ddnnfCountCmd()
 
-    command = f"echo \"\" >> {logFile}"
-    os.system(command)
+    with open(logFile, 'a') as f:
+        f.write("\n")
 
 
 # Main function
 def main():
     """
-    Main function to orchestrate the execution of SAT solvers based on user input or automatic mode.
+    Main function to orchestrate the execution of SAT solvers based on user input.
     """
     signal.signal(signal.SIGINT, signalHandler)
     checkBASEDIR(CURR_DIR)
 
     solverChoice = ""
     example = ""
-    automatic = False
 
     # Parse command-line arguments
-    solverChoice, example, automatic = getargs(sys.argv[1:])
+    solverChoice, example = getargs(sys.argv[1:])
 
     if solverChoice not in SOLVERS:
         print("[ERROR] Provide correct solver")
@@ -325,23 +319,11 @@ def main():
     if not os.path.exists(OUTPUT_PATH):
         os.makedirs(OUTPUT_PATH)
 
-    # Automatic mode: execute all examples with all solvers
-    if automatic:
-        tests = os.listdir(EXAMPLES_PATH)
-        tests.sort()
-        for s in SOLVERS:
-            for t in tests:
-                print(f"[INFO] Processing example: {t} SAT: {os.path.basename(SOLVERS[s])}")
-                execute(SOLVERS[s], t)
-        print("[INFO] Process finished without errors")
-        print("[INFO] EXITING...")
-    # Manual mode
-    else:
-        # Execute the chosen solver on the specified example
-        print(f"[INFO] Processing example {example} with solver {solverChoice}")
-        print()
-        execute(SOLVERS[solverChoice], example)
-        print("[INFO] Process finished without errors")
+    # Execute the chosen solver on the specified example
+    print(f"[INFO] Processing example {example} with solver {solverChoice}")
+    print()
+    execute(SOLVERS[solverChoice], example)
+    print("[INFO] Process finished without errors")
 
 
 # Entry point of the script

@@ -28,6 +28,7 @@ COMSPS_PATH = f"{PROGRAM_DIR}/COMSPS+/simp/glucose"
 C2D_PATH = f"{PROGRAM_DIR}/c2d/c2d"
 D4_PATH = f"{PROGRAM_DIR}/d4/d4"
 dREASONER_PATH = f"{PROGRAM_DIR}/dDNNFreasoner/query-dnnf"
+BACKBONE_PATH = f"{PROGRAM_DIR}/rubenBackbone/backbone.sh"
 
 EXAMPLES_PATH = f"{DATA_DIR}/CNF_EXAMPLES"
 OUTPUT_PATH = f"{DATA_DIR}/SAT_RESULTS"
@@ -57,6 +58,14 @@ def checkBASEDIR(path):
         sys.exit(1)
 
 
+# Function to verify if the example file exists
+def exampleExists(example):
+    """
+    Checks if the specified example file exists in the examples directory.
+    """
+    return os.path.isfile(os.path.join(EXAMPLES_PATH, example))
+
+
 def usage():
     print("[INFO] Usage: python script.py\n\
                                 [-h / --help]\n\
@@ -72,9 +81,10 @@ def getargs(argv):
     """
     solver = ""
     example = ""
+    preProcessingList = []
 
     try:
-        opts, args = getopt.getopt(argv, "hs:e:", ["help", "solver=", "example="])
+        opts, args = getopt.getopt(argv, "hs:e:vb", ["help", "solver=", "example=", "vivification", "backbone"])
     except getopt.GetoptError:
         usage()
         sys.exit(1)
@@ -99,20 +109,46 @@ def getargs(argv):
         elif opt in ("-e", "--example"):
             example = arg
 
+        elif opt in ("-v",  "--vivification"):
+            preProcessingList.append("v")
+
+        elif opt in ("-b", "--backbone"):
+            preProcessingList.append("b")
+
     if solver == "" and example == "":
         print("[ERROR] Solver and example are mandatory arguments")
         print("[ERROR] EXITING...")
         sys.exit(1)
 
-    return solver, example
+    if solver not in SOLVERS:
+        print("[ERROR] Provide correct solver")
+        print("[ERROR] EXITING...")
+        sys.exit(1)
+
+    if not exampleExists(example):
+        print("[ERROR] Example not found")
+        print("[ERROR] EXITING...")
+        sys.exit(1)
+
+    if len(preProcessingList) < 1:
+        print("[ERROR] One preprocessing technique is mandatory")
+        print("[ERROR] EXITING...")
+        sys.exit(1)
+
+    return solver, example, preProcessingList
 
 
-# Function to verify if the example file exists
-def exampleExists(example):
-    """
-    Checks if the specified example file exists in the examples directory.
-    """
-    return os.path.isfile(os.path.join(EXAMPLES_PATH, example))
+def writeMetadata(solverName, example, preProcessingList, logFile):
+    cv = "FALSE"
+    cb = "FALSE"
+    for p in preProcessingList:
+        if p == "v":
+            cv = "TRUE"
+        if p == "b":
+            cb = "TRUE"
+
+    with open(logFile, 'a') as f:
+        f.write(f"{solverName};{example};{cv};{cb};")
 
 
 def getVarsandClauses(example, logFile):
@@ -143,7 +179,7 @@ def compareWorlds(w1, w2, logFile):
             f.write("FALSE;")
 
 
-def vivifyCmd(solverPath, solverName, example, vivifiedExample, logFile, varElimination=False):
+def vivification(solverPath, solverName, example, vivifiedExample, varElimination=False):
     """
     Constructs the command to execute a SAT solver based on its path and vivification option.
     Currently, this function is not fully implemented.
@@ -167,6 +203,39 @@ def grepTimeInVivification(example, logFile, deleteFile):
 
     if deleteFile:
         os.remove(example)
+
+
+def backbone(solverPath, solverName, example, backbonedExample):
+    print(f"{solverPath} {example}")
+    print(f"mv {example}_preproc.dimacs {backbonedExample}")
+    #os.system(cmd)
+
+
+def grepTimeInBackbone(example, logFile, deleteFile):
+    cmd = f"grep \"time\" {example}.stats | sed 's/.*time=\([0-9.]*\).*/\1/'"
+    print(f"rm -f {example}.back")
+    print(f"rm -f {example}.stats")
+    #os.system(cmd)
+    
+
+def preProcessing(techniques, solverPath, solverName, example, preproExample, logFile):
+
+    PREPROCESSINGMECH = {
+        'v': vivification,
+        'b': backbone
+    }
+
+    for t in techniques:
+        if t == 'v':
+            PREPROCESSINGMECH[t](solverPath, solverName, example, preproExample)
+            if os.path.basename(solverPath) == "pmc":
+                grepTimeInVivification(f"{preproExample}", logFile, False)
+            else:
+                grepTimeInVivification(f"{preproExample}_aux.log", logFile, True)
+
+        else:
+            PREPROCESSINGMECH[t](BACKBONE_PATH, BACKBONE_PATH.split('/')[-1], example, preproExample)
+            grepTimeInBackbone(example, logFile, True)
 
 
 def cnf2dDNNFCmd(example, vivified, logFile, solverName=""):
@@ -228,7 +297,7 @@ def ddnnfCountCmd(example, logFile):
 
 
 # Function to execute SAT solver with a given example
-def execute(solverPath, example):
+def execute(solverPath, example, preProcessingList):
     """
     Executes the specified SAT solver on a given example file and logs the output.
     """
@@ -240,13 +309,12 @@ def execute(solverPath, example):
 
     logFile = f"{OUTPUT_PATH}/{solverName}_{PID}_{example}_{timestamp}.log"
 
-    vivifiedExample = f"vivified_{solverName}_{PID}_{example}"
+    preproExample = f"preprom_{solverName}_{PID}_{example}"
 
     #SATsolver;Example;Vivification;Backbone;#vars OGCNF;#clau OGCNF;OGCNF worlds;Vivify-Time;#vars VIVCNF;#clau VIVCNF;VIVCNF worlds;Same worlds;OGCNF2dDNNF Time;VIVCNF2dDNNF Time;OGdDNNF worlds;VIVdDNNF worlds;
     #os.system(command)
 
-    with open(logFile, 'a') as f:
-        f.write(f"{solverName};{example};TRUE;FALSE;")
+    writeMetadata(solverName, example, preProcessingList, logFile)
 
     #First extract the number of vars & clauses of the original cnf
     getVarsandClauses(f"{EXAMPLES_PATH}/{example}", logFile)
@@ -254,18 +322,14 @@ def execute(solverPath, example):
     #Second count the number of solutions of the original cnf
     OGworlds = cnfCountWorlds(f"{EXAMPLES_PATH}/{example}", logFile)
 
-    #Third vivify the cnf with desired mechanism TODO ADD D4 to vivification process
-    vivifyCmd(solverPath, solverName, f"{EXAMPLES_PATH}/{example}", f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
-    if os.path.basename(solverPath) == "pmc":
-        grepTimeInVivification(f"{OUTPUT_PATH}/{vivifiedExample}", logFile, False)
-    else:
-        grepTimeInVivification(f"{OUTPUT_PATH}/{vivifiedExample}_aux.log", logFile, True)
+    #Third preprocess the cnf with desired mechanism and techniques TODO ADD D4 to vivification process
+    preProcessing(preProcessingList, solverPath, solverName, f"{EXAMPLES_PATH}/{example}", f"{OUTPUT_PATH}/{preproExample}", logFile)
 
     #Fourth extract the number of vars & clauses of the vivified cnf
-    getVarsandClauses(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
+    getVarsandClauses(f"{OUTPUT_PATH}/{preproExample}", logFile)
 
     #Fifth count the number of solutions of the vivified cnf
-    VIVworlds = cnfCountWorlds(f"{OUTPUT_PATH}/{vivifiedExample}", logFile)
+    VIVworlds = cnfCountWorlds(f"{OUTPUT_PATH}/{preproExample}", logFile)
 
     #Sixth same solutions OG CNF - VIV CNF
     compareWorlds(OGworlds, VIVworlds, logFile)
@@ -275,15 +339,15 @@ def execute(solverPath, example):
     grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{PID}_{example}.log", logFile, True)
 
     #Eighth convert vivified cnf to dDNNF TODO CAN BE DONE EVEN WITH D4
-    cnf2dDNNFCmd(f"{vivifiedExample}", True, logFile)
-    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{vivifiedExample}.log", logFile, True)
+    cnf2dDNNFCmd(f"{preproExample}", True, logFile)
+    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{preproExample}.log", logFile, True)
 
     #Ninth move original.nnf to result folder
-    os.replace(f"mv {EXAMPLES_PATH}/{example}.nnf", f"{OUTPUT_PATH}/{PID}_{example}.nnf")
+    os.replace(f"{EXAMPLES_PATH}/{example}.nnf", f"{OUTPUT_PATH}/{PID}_{example}.nnf")
 
     #TODO Tenth count OG dDNNF - VIV dDNNF
-    #ddnnfCountCmd()
-    #ddnnfCountCmd()
+    ddnnfCountWorlds(f"{OUTPUT_PATH}/{PID}_{example}.nnf", logFile)
+    ddnnfCountWorlds(f"{OUTPUT_PATH}/{preproExample}.nnf", logFile)
 
     with open(logFile, 'a') as f:
         f.write("\n")
@@ -301,17 +365,7 @@ def main():
     example = ""
 
     # Parse command-line arguments
-    solverChoice, example = getargs(sys.argv[1:])
-
-    if solverChoice not in SOLVERS:
-        print("[ERROR] Provide correct solver")
-        print("[ERROR] EXITING...")
-        sys.exit(1)
-
-    if not exampleExists(example):
-        print("[ERROR] Example not found")
-        print("[ERROR] EXITING...")
-        sys.exit(1)
+    solverChoice, example, preProcessingList = getargs(sys.argv[1:])
 
     # Create output directory if it does not exist
     if not os.path.exists(OUTPUT_PATH):
@@ -320,7 +374,7 @@ def main():
     # Execute the chosen solver on the specified example
     print(f"[INFO] Processing example {example} with solver {solverChoice}")
     print()
-    execute(SOLVERS[solverChoice], example)
+    execute(SOLVERS[solverChoice], example, preProcessingList)
     print("[INFO] Process finished without errors")
 
 

@@ -141,11 +141,13 @@ def getargs(argv):
 def writeMetadata(solverName, example, preProcessingList, logFile):
     cv = "FALSE"
     cb = "FALSE"
+    pos = 1
     for p in preProcessingList:
         if p == "v":
-            cv = "TRUE"
+            cv = pos
         if p == "b":
-            cb = "TRUE"
+            cb = pos
+        pos+=1
 
     with open(logFile, 'a') as f:
         f.write(f"{solverName};{example};{cv};{cb};")
@@ -262,7 +264,9 @@ def cnf2dDNNFCmd(example, vivified, logFile, solverName=""):
             subprocess.run(cmd, stdout=sOutFile, timeout=TIMEOUT_C2D)
     except subprocess.TimeoutExpired:
         with open(logFile, "a") as f:
-            f.write("TIMEOUT;-;-;-;")
+            f.write("TIMEOUT;")
+            return False
+    return True
 
 
 def grepTimeInC2D(output, logFile, deleteFile):
@@ -284,10 +288,19 @@ def cnfCountWorlds(example, logFile):
                 stdoutD4 = (stepD4.stdout).decode('utf-8')
                 worlds = re.search(r's (\d+)', stdoutD4)
                 f.write(worlds.group(1) + ";")
+        else:
+            with open(logFile, 'a') as f:
+                f.write("ABORT;")
+            return None
+
     except subprocess.TimeoutExpired:
         with open(logFile, 'a') as f:
             f.write("TIMEOUT;")
-
+        return None
+    except:
+        with open(logFile, 'a') as f:
+            f.write("ABORT;")
+        return None
     return worlds.group(1)
 
 
@@ -309,7 +322,7 @@ def execute(solverPath, example, preProcessingList):
 
     logFile = f"{OUTPUT_PATH}/{solverName}_{PID}_{example}_{timestamp}.log"
 
-    preproExample = f"preprom_{solverName}_{PID}_{example}"
+    preproExample = f"prepro_{solverName}_{PID}_{example}"
 
     #SATsolver;Example;Vivification;Backbone;#vars OGCNF;#clau OGCNF;OGCNF worlds;Vivify-Time;#vars VIVCNF;#clau VIVCNF;VIVCNF worlds;Same worlds;OGCNF2dDNNF Time;VIVCNF2dDNNF Time;OGdDNNF worlds;VIVdDNNF worlds;
     #os.system(command)
@@ -320,6 +333,7 @@ def execute(solverPath, example, preProcessingList):
     getVarsandClauses(f"{EXAMPLES_PATH}/{example}", logFile)
 
     #Second count the number of solutions of the original cnf
+    OGworlds = None
     OGworlds = cnfCountWorlds(f"{EXAMPLES_PATH}/{example}", logFile)
 
     #Third preprocess the cnf with desired mechanism and techniques TODO ADD D4 to vivification process
@@ -329,25 +343,32 @@ def execute(solverPath, example, preProcessingList):
     getVarsandClauses(f"{OUTPUT_PATH}/{preproExample}", logFile)
 
     #Fifth count the number of solutions of the vivified cnf
-    VIVworlds = cnfCountWorlds(f"{OUTPUT_PATH}/{preproExample}", logFile)
+    PREworlds = None
+    PREworlds = cnfCountWorlds(f"{OUTPUT_PATH}/{preproExample}", logFile)
 
     #Sixth same solutions OG CNF - VIV CNF
-    compareWorlds(OGworlds, VIVworlds, logFile)
+    compareWorlds(OGworlds, PREworlds, logFile)
 
     #Seventh convert original cnf to dDNNF TODO CAN BE DONE EVEN WITH D4
-    cnf2dDNNFCmd(example, False, logFile, solverName)
+    compOGdDNNF = cnf2dDNNFCmd(example, False, logFile, solverName)
     grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{PID}_{example}.log", logFile, True)
+    if compOGdDNNF:
+        os.replace(f"{EXAMPLES_PATH}/{example}.nnf", f"{OUTPUT_PATH}/{PID}_{example}.nnf")
 
     #Eighth convert vivified cnf to dDNNF TODO CAN BE DONE EVEN WITH D4
-    cnf2dDNNFCmd(f"{preproExample}", True, logFile)
+    compPredDNNF = cnf2dDNNFCmd(f"{preproExample}", True, logFile)
     grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{preproExample}.log", logFile, True)
 
-    #Ninth move original.nnf to result folder
-    os.replace(f"{EXAMPLES_PATH}/{example}.nnf", f"{OUTPUT_PATH}/{PID}_{example}.nnf")
 
     #TODO Tenth count OG dDNNF - VIV dDNNF
-    ddnnfCountWorlds(f"{OUTPUT_PATH}/{PID}_{example}.nnf", logFile)
-    ddnnfCountWorlds(f"{OUTPUT_PATH}/{preproExample}.nnf", logFile)
+    OGdDNNFworlds = None
+    PREdDNNFworlds = None
+    if compOGdDNNF:
+        OGdDNNFworlds = ddnnfCountWorlds(f"{OUTPUT_PATH}/{PID}_{example}.nnf", logFile)
+    if compPredDNNF:
+        PREdDNNFworlds = ddnnfCountWorlds(f"{OUTPUT_PATH}/{preproExample}.nnf", logFile)
+
+    compareWorlds(OGdDNNFworlds, PREdDNNFworlds, logFile)
 
     with open(logFile, 'a') as f:
         f.write("\n")

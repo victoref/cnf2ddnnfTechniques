@@ -42,37 +42,33 @@ SOLVERS = {
     "comsps": COMSPS_PATH
 }
 
-PID=os.getpid()
+PID = os.getpid()
 
 TIMEOUT_C2D = 1200
-TIMEOUT_D4 = 10000
+TIMEOUT_D4 = 2400
 
+# Signal handler for clean exit
 def signalHandler(sig, frame):
     print("\n[INFO] EXITING...")
     sys.exit(0)
 
-
+# Function to check if the script is being executed in the correct directory
 def checkBASEDIR(path):
     if os.path.basename(path) != "scripts":
         print("[ERROR] Please execute the scripts in its specific folder")
         sys.exit(1)
 
-
 # Function to verify if the example file exists
 def exampleExists(example):
-    """
-    Checks if the specified example file exists in the examples directory.
-    """
     return os.path.isfile(os.path.join(EXAMPLES_PATH, example))
 
-
+# Function to display usage information
 def usage():
     print("[INFO] Usage: python script.py\n\
                                 [-h / --help]\n\
                                 [-s <solver> / --solver <solver>]\n\
                                 [-e <example> / --example <example>]")
     print("[INFO] List of solvers [pmc, maple, mapleLRB, glucose+, comsps]")
-
 
 # Function to get command-line arguments
 def getargs(argv):
@@ -137,7 +133,7 @@ def getargs(argv):
 
     return solver, example, preProcessingList
 
-
+# Function to write metadata to a log file
 def writeMetadata(solverName, example, preProcessingList, logFile):
     cv = "FALSE"
     cb = "FALSE"
@@ -147,12 +143,12 @@ def writeMetadata(solverName, example, preProcessingList, logFile):
             cv = pos
         if p == "b":
             cb = pos
-        pos+=1
+        pos += 1
 
     with open(logFile, 'a') as f:
         f.write(f"{solverName};{example};{cv};{cb};")
 
-
+# Function to get the number of variables and clauses from an example file
 def getVarsandClauses(example, logFile):
     numVars = 0
     numClauses = 0
@@ -168,7 +164,7 @@ def getVarsandClauses(example, logFile):
 
     return numVars, numClauses
 
-
+# Function to compare worlds and log the result
 def compareWorlds(w1, w2, logFile):
     sameWs = False
     if w1 != None and w2 != None and w1 != "" and w2 != "":
@@ -180,12 +176,8 @@ def compareWorlds(w1, w2, logFile):
         else:
             f.write("FALSE;")
 
-
+# Function to perform vivification
 def vivification(solverPath, solverName, example, vivifiedExample, varElimination=False):
-    """
-    Constructs the command to execute a SAT solver based on its path and vivification option.
-    Currently, this function is not fully implemented.
-    """
     eliminationFlag = "-no-elim"
     if varElimination:
         eliminationFlag = "-elim"
@@ -198,7 +190,7 @@ def vivification(solverPath, solverName, example, vivifiedExample, varEliminatio
         cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={vivifiedExample} {example}  | tee -a {vivifiedExample}_aux.log"
     os.system(cmd)
 
-
+# Function to grep CPU time in vivification logs
 def grepTimeInVivification(example, logFile, deleteFile):
     command = f"grep \"CPU time\" {example} | awk '{{print $5}}' | tr '\n' ';' >> {logFile}"
     os.system(command)
@@ -220,6 +212,7 @@ def grepTimeInBackbone(example, logFile, deleteFile):
     #os.system(cmd)
     
 
+# Function to perform preprocessing
 def preProcessing(techniques, solverPath, solverName, example, preproExample, logFile):
 
     PREPROCESSINGMECH = {
@@ -240,6 +233,7 @@ def preProcessing(techniques, solverPath, solverName, example, preproExample, lo
             grepTimeInBackbone(example, logFile, True)
 
 
+# Function to construct and execute c2d command
 def cnf2dDNNFCmd(example, vivified, logFile, solverName=""):
     try:
         inArg = ""
@@ -268,7 +262,7 @@ def cnf2dDNNFCmd(example, vivified, logFile, solverName=""):
             return False
     return True
 
-
+# Function to grep total time from c2d output
 def grepTimeInC2D(output, logFile, deleteFile):
     cmd = f"grep \"Total Time\" {output} | sed -E 's/Total Time: ([^s]+)s/\\1/' |  tr '\n' ';' >> {logFile}"
     os.system(cmd)
@@ -276,7 +270,7 @@ def grepTimeInC2D(output, logFile, deleteFile):
         cmd = f"rm -f {output}"
         os.system(cmd)
 
-
+# Function to count worlds using d4
 def cnfCountWorlds(example, logFile):
     d4Cmd = [D4_PATH, '-mc', example]
     worlds = None
@@ -329,38 +323,37 @@ def execute(solverPath, example, preProcessingList):
 
     writeMetadata(solverName, example, preProcessingList, logFile)
 
-    #First extract the number of vars & clauses of the original cnf
+    # First extract the number of vars & clauses of the original cnf
     getVarsandClauses(f"{EXAMPLES_PATH}/{example}", logFile)
 
-    #Second count the number of solutions of the original cnf
+    # Second count the number of solutions of the original cnf
     OGworlds = None
     OGworlds = cnfCountWorlds(f"{EXAMPLES_PATH}/{example}", logFile)
 
-    #Third preprocess the cnf with desired mechanism and techniques TODO ADD D4 to vivification process
+    # Third preprocess the cnf with desired mechanism and techniques TODO ADD D4 to vivification process
     preProcessing(preProcessingList, solverPath, solverName, f"{EXAMPLES_PATH}/{example}", f"{OUTPUT_PATH}/{preproExample}", logFile)
 
-    #Fourth extract the number of vars & clauses of the vivified cnf
+    # Fourth extract the number of vars & clauses of the vivified cnf
     getVarsandClauses(f"{OUTPUT_PATH}/{preproExample}", logFile)
 
-    #Fifth count the number of solutions of the vivified cnf
+    # Fifth count the number of solutions of the vivified cnf
     PREworlds = None
     PREworlds = cnfCountWorlds(f"{OUTPUT_PATH}/{preproExample}", logFile)
 
-    #Sixth same solutions OG CNF - VIV CNF
+    # Sixth same solutions OG CNF - VIV CNF
     compareWorlds(OGworlds, PREworlds, logFile)
 
-    #Seventh convert original cnf to dDNNF TODO CAN BE DONE EVEN WITH D4
+    # Seventh convert original cnf to dDNNF TODO CAN BE DONE EVEN WITH D4
     compOGdDNNF = cnf2dDNNFCmd(example, False, logFile, solverName)
     grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{PID}_{example}.log", logFile, True)
     if compOGdDNNF:
         os.replace(f"{EXAMPLES_PATH}/{example}.nnf", f"{OUTPUT_PATH}/{PID}_{example}.nnf")
 
-    #Eighth convert vivified cnf to dDNNF TODO CAN BE DONE EVEN WITH D4
+    # Eighth convert vivified cnf to dDNNF TODO CAN BE DONE EVEN WITH D4
     compPredDNNF = cnf2dDNNFCmd(f"{preproExample}", True, logFile)
     grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{preproExample}.log", logFile, True)
 
-
-    #TODO Tenth count OG dDNNF - VIV dDNNF
+    # TODO Tenth count OG dDNNF - VIV dDNNF
     OGdDNNFworlds = None
     PREdDNNFworlds = None
     if compOGdDNNF:
@@ -372,7 +365,6 @@ def execute(solverPath, example, preProcessingList):
 
     with open(logFile, 'a') as f:
         f.write("\n")
-
 
 # Main function
 def main():
@@ -397,7 +389,6 @@ def main():
     print()
     execute(SOLVERS[solverChoice], example, preProcessingList)
     print("[INFO] Process finished without errors")
-
 
 # Entry point of the script
 if __name__ == "__main__":

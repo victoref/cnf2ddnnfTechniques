@@ -58,7 +58,7 @@ def checkBASEDIR(path):
         print("[ERROR] Please execute the scripts in its specific folder")
         sys.exit(1)
 
-# Function to verify if the example file exists
+# Function to verify if the specified example file exists in the examples directory
 def exampleExists(example):
     return os.path.isfile(os.path.join(EXAMPLES_PATH, example))
 
@@ -72,9 +72,6 @@ def usage():
 
 # Function to get command-line arguments
 def getargs(argv):
-    """
-    Parses command-line arguments to determine debug mode and vivification option.
-    """
     solver = ""
     example = ""
     preProcessingList = []
@@ -190,7 +187,7 @@ def vivification(solverPath, solverName, example, vivifiedExample, varEliminatio
         cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={vivifiedExample} {example}  | tee -a {vivifiedExample}_aux.log"
     os.system(cmd)
 
-# Function to grep CPU time in vivification logs
+# Function to grep vivification time in the logs
 def grepTimeInVivification(example, logFile, deleteFile):
     command = f"grep \"CPU time\" {example} | awk '{{print $5}}' | tr '\n' ';' >> {logFile}"
     os.system(command)
@@ -212,7 +209,7 @@ def grepTimeInBackbone(example, logFile, deleteFile):
     #os.system(cmd)
     
 
-# Function to perform preprocessing
+# Function to establish techniques order
 def preProcessing(techniques, solverPath, solverName, example, preproExample, logFile):
 
     PREPROCESSINGMECH = {
@@ -233,7 +230,7 @@ def preProcessing(techniques, solverPath, solverName, example, preproExample, lo
             grepTimeInBackbone(example, logFile, True)
 
 
-# Function to construct and execute c2d command
+# Function to construct and execute c2d command to convert CNF to dDNNF
 def cnf2dDNNFCmd(example, vivified, logFile, solverName=""):
     try:
         inArg = ""
@@ -270,11 +267,10 @@ def grepTimeInC2D(output, logFile, deleteFile):
         cmd = f"rm -f {output}"
         os.system(cmd)
 
-# Function to count worlds using d4
+# Function to count CNF worlds using d4
 def cnfCountWorlds(example, logFile):
     d4Cmd = [D4_PATH, '-mc', example]
     worlds = None
-
     try:
         stepD4 = subprocess.run(d4Cmd, timeout=TIMEOUT_D4, capture_output=True)
         if stepD4.returncode == 0:
@@ -303,11 +299,8 @@ def ddnnfCountCmd(example, logFile):
     os.system(cmd)
 
 
-# Function to execute SAT solver with a given example
+# Function which executes all the steps to collect all metrics of a given example
 def execute(solverPath, example, preProcessingList):
-    """
-    Executes the specified SAT solver on a given example file and logs the output.
-    """
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
 
     pSplited = solverPath.split('/')
@@ -366,11 +359,9 @@ def execute(solverPath, example, preProcessingList):
     with open(logFile, 'a') as f:
         f.write("\n")
 
+
 # Main function
 def main():
-    """
-    Main function to orchestrate the execution of SAT solvers based on user input.
-    """
     signal.signal(signal.SIGINT, signalHandler)
     checkBASEDIR(CURR_DIR)
 
@@ -389,6 +380,7 @@ def main():
     print()
     execute(SOLVERS[solverChoice], example, preProcessingList)
     print("[INFO] Process finished without errors")
+
 
 # Entry point of the script
 if __name__ == "__main__":

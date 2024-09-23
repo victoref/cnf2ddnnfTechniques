@@ -1,0 +1,4 @@
+nohup parallel --jobs 1 python3 SAT.py -s {1} -e {2} -v ::: pmc maple mapleLRB glucose+ comsps ::: mc2023_track1_008.cnf 2.6.32-2var_oh20.dimacs 2.6.33.3-2var_oh20.dimacs cdl_aaed2000_knuppel17.dimacs cdl_cq7708_knuppel17.dimacs cdl_innovator_knuppel17.dimacs &
+
+nohup parallel --jobs 1 python3 SAT.py -s {1} -e {2} -v -b ::: pmc maple mapleLRB glucose+ comsps ::: 2.6.32-2var_oh20.dimacs buildroot_fernandez22.dimacs cdl_cq7708_knuppel17.dimacs embtoolkit_fernandez22.dimacs linux_fernandez22.dimacs uClibc_fernandez22.dimacs 2.6.33.3-2var_oh20.dimacs busybox_fernandez22.dimacs cdl_innovator_knuppel17.dimacs fiasco_fernandez22.dimacs mc2023_track1_008.cnf axtls_fernandez22.dimacs cdl_aaed2000_knuppel17.dimacs coreboot_fernandez22.dimacs freetz_fernandez22.dimacs toybox_fernandez22.dimacs &
+

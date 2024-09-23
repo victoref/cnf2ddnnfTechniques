@@ -271,7 +271,7 @@ def cnf2dDNNFCmd(example, vivified, logFile, solverName=""):
 
 # Function to grep total time from c2d output
 def grepTimeInC2D(output, logFile, deleteFile):
-    cmd = f"grep \"Total Time\" {output} | sed -E 's/Total Time: ([^s]+)s/\\1/' |  tr '\n' ';' >> {logFile}"
+    cmd = f"grep \"Total Time\" {output} | sed -E 's/Total Time: ([^s]+)s/\\1/' | sed 's/\./,/g' | tr '\n' ';' >> {logFile}"
     os.system(cmd)
     if deleteFile:
         cmd = f"rm -f {output}"

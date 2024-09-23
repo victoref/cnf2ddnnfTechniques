@@ -195,19 +195,17 @@ def grepTimeInVivification(example, logFile, deleteFile):
     if deleteFile:
         os.remove(example)
 
+# Function to execute backbone script on given example
+def backbone(solverPath, example, backbonedExample):
+    cmd = f"{solverPath} {example} {OUTPUT_PATH} {backbonedExample}"
+    os.system(cmd)
 
-def backbone(solverPath, solverName, example, backbonedExample):
-    print(f"{solverPath} {example}")
-    print(f"mv {example}_preproc.dimacs {backbonedExample}")
-    #os.system(cmd)
-
-
-def grepTimeInBackbone(example, logFile, deleteFile):
-    cmd = f"grep \"time\" {example}.stats | sed 's/.*time=\([0-9.]*\).*/\1/'"
-    print(f"rm -f {example}.back")
-    print(f"rm -f {example}.stats")
-    #os.system(cmd)
-    
+# Function to grep backbone time in the logs
+def grepTimeInBackbone(example, logFile):
+    auxName = ('.'.join(os.path.basename(example).split('.')[:-1]))
+    cmd = f"grep \"time\" {OUTPUT_PATH}/{auxName}.stats | sed 's/.*time=\\([0-9.]*\\).*/\\1/' | xargs echo | awk '{{printf \"%f;\", $1 + $2}}' | sed 's/\./,/g' >> {logFile}"
+    os.system(cmd)
+    os.remove(f"{OUTPUT_PATH}/{auxName}.stats")
 
 # Function to establish techniques order
 def preProcessing(techniques, solverPath, solverName, example, preproExample, logFile):

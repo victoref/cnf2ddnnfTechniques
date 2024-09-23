@@ -220,18 +220,25 @@ def preProcessing(techniques, solverPath, solverName, example, preproExample, lo
         'b': backbone
     }
 
+    halfPart = example
+
     for t in techniques:
         if t == 'v':
-            PREPROCESSINGMECH[t](solverPath, solverName, example, preproExample)
+            PREPROCESSINGMECH[t](solverPath, solverName, halfPart, preproExample)
             if os.path.basename(solverPath) == "pmc":
                 grepTimeInVivification(f"{preproExample}", logFile, False)
             else:
                 grepTimeInVivification(f"{preproExample}_aux.log", logFile, True)
+            halfPart = preproExample
+            if len(techniques) == 1:
+                os.system(f"echo -n \";\" >> {logFile}")
 
         else:
-            PREPROCESSINGMECH[t](BACKBONE_PATH, BACKBONE_PATH.split('/')[-1], example, preproExample)
-            grepTimeInBackbone(example, logFile, True)
-
+            if len(techniques) == 1:
+                os.system(f"echo -n \";\" >> {logFile}")
+            PREPROCESSINGMECH[t](BACKBONE_PATH, halfPart, preproExample)
+            grepTimeInBackbone(halfPart, logFile)
+            halfPart = preproExample
 
 # Function to construct and execute c2d command to convert CNF to dDNNF
 def cnf2dDNNFCmd(example, vivified, logFile, solverName=""):

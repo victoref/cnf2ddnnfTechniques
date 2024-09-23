@@ -303,11 +303,24 @@ def cnfCountWorlds(example, logFile):
         return None
     return worlds.group(1)
 
-
-def ddnnfCountCmd(example, logFile):
-    cmd = f"{dREASONER_PATH} |  tr '\n' ';' >> {logFile}"
+# Function to count dDNNF worlds using d4
+def ddnnfCountWorlds(example, logFile):
+    worlds = None
+    with open (f"{PID}_cmd.txt", 'a') as f:
+        f.write(f"load {example}\n")
+        f.write("mc")
+    cmd = f"{dREASONER_PATH} < {PID}_cmd.txt > {PID}_auxOutput.log"
     os.system(cmd)
+    with open(f"{PID}_auxOutput.log", 'r') as file:
+        file_content = file.read()
+        worlds = re.search(r'> (\d+)', file_content)
+    with open(logFile, 'a') as f:
+        f.write(worlds.group(1) + ";")
 
+    os.remove(f"{PID}_cmd.txt")
+    os.remove(f"{PID}_auxOutput.log")
+
+    return worlds.group(1)
 
 # Function which executes all the steps to collect all metrics of a given example
 def execute(solverPath, example, preProcessingList):

@@ -173,23 +173,28 @@ def compareWorlds(w1, w2, logFile):
         else:
             f.write("FALSE;")
 
-# Function to perform vivification
-def vivification(solverPath, solverName, example, vivifiedExample, varElimination=False):
-    eliminationFlag = "-no-elim"
+# Function to execute vivification on given example, it can use different programs
+def vivification(solverPath, solverName, example, vivifiedExample, varElimination=False, litElimination=False):
+    litElimFlag = "-no-eliminateLit"
     if varElimination:
-        eliminationFlag = "-elim"
+        litElimFlag = "-eliminateLit"
+
+    varElimFlag = "-no-elim"
+    if varElimination:
+        varElimFlag = "-elim"
 
     cmd = ""
     if solverName == "pmc":
-        cmd = f"{solverPath} -verb=1 -vivification {example} | tee -a {vivifiedExample}"
+        cmd = f"{solverPath} -verb=1 -vivification {litElimFlag} {example} > {OUTPUT_PATH}/aux.file"
 
     else:
-        cmd = f"{solverPath} {eliminationFlag} -pre -verb=2 -dimacs={vivifiedExample} {example}  | tee -a {vivifiedExample}_aux.log"
+        cmd = f"{solverPath} {varElimFlag} -pre -verb=2 -dimacs={OUTPUT_PATH}/aux.file {example}  | tee -a {vivifiedExample}_aux.log"
     os.system(cmd)
+    os.replace(f"{OUTPUT_PATH}/aux.file", vivifiedExample)
 
 # Function to grep vivification time in the logs
 def grepTimeInVivification(example, logFile, deleteFile):
-    command = f"grep \"CPU time\" {example} | awk '{{print $5}}' | tr '\n' ';' >> {logFile}"
+    command = f"grep \"CPU time\" {example} | awk '{{print $5}}' | sed 's/\./,/g' | tr '\n' ';' >> {logFile}"
     os.system(command)
 
     if deleteFile:

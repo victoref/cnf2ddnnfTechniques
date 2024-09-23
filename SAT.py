@@ -164,7 +164,7 @@ def getVarsandClauses(example, logFile):
 # Function to compare worlds and log the result
 def compareWorlds(w1, w2, logFile):
     sameWs = False
-    if w1 != None and w2 != None and w1 != "" and w2 != "":
+    if w1 != None and w2 != None:
         if w1 == w2:
             sameWs = True
     with open(logFile, 'a') as f:

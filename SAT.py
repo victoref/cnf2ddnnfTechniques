@@ -334,42 +334,45 @@ def execute(solverPath, example, preProcessingList):
 
     preproExample = f"prepro_{solverName}_{PID}_{example}"
 
-    #SATsolver;Example;Vivification;Backbone;#vars OGCNF;#clau OGCNF;OGCNF worlds;Vivify-Time;#vars VIVCNF;#clau VIVCNF;VIVCNF worlds;Same worlds;OGCNF2dDNNF Time;VIVCNF2dDNNF Time;OGdDNNF worlds;VIVdDNNF worlds;
-    #os.system(command)
-
+    #SATsolver;Example;Vivification;Backbone;#vars OGCNF;#clau OGCNF;OGCNF worlds;Vivify-Time;Backbone-Time;#vars VIVCNF;#clau PRECNF;PRECNF worlds;Same worlds;OGCNF2dDNNF Time;PRECNF2dDNNF Time;OGdDNNF worlds;PREdDNNF worlds;
     writeMetadata(solverName, example, preProcessingList, logFile)
 
-    # First extract the number of vars & clauses of the original cnf
+    #First extract the number of vars & clauses of the original cnf
     getVarsandClauses(f"{EXAMPLES_PATH}/{example}", logFile)
 
-    # Second count the number of solutions of the original cnf
+    #Second count the number of solutions of the original cnf
     OGworlds = None
     OGworlds = cnfCountWorlds(f"{EXAMPLES_PATH}/{example}", logFile)
 
-    # Third preprocess the cnf with desired mechanism and techniques TODO ADD D4 to vivification process
+    #Third preprocess the cnf with desired mechanism and techniques
     preProcessing(preProcessingList, solverPath, solverName, f"{EXAMPLES_PATH}/{example}", f"{OUTPUT_PATH}/{preproExample}", logFile)
 
-    # Fourth extract the number of vars & clauses of the vivified cnf
+    #Fourth extract the number of vars & clauses of the vivified cnf
     getVarsandClauses(f"{OUTPUT_PATH}/{preproExample}", logFile)
 
-    # Fifth count the number of solutions of the vivified cnf
+    #Fifth count the number of solutions of the vivified cnf
     PREworlds = None
     PREworlds = cnfCountWorlds(f"{OUTPUT_PATH}/{preproExample}", logFile)
 
-    # Sixth same solutions OG CNF - VIV CNF
+    #Sixth compare number of solutions OG CNF and VIV CNF
     compareWorlds(OGworlds, PREworlds, logFile)
 
-    # Seventh convert original cnf to dDNNF TODO CAN BE DONE EVEN WITH D4
+    #Seventh convert original cnf to dDNNF
     compOGdDNNF = cnf2dDNNFCmd(example, False, logFile, solverName)
+    if compOGdDNNF:
     grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{PID}_{example}.log", logFile, True)
+    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{PID}_{example}.log", logFile, True)
+    if compOGdDNNF:
+        grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{solverName}_{PID}_{example}.log", logFile, True)
     if compOGdDNNF:
         os.replace(f"{EXAMPLES_PATH}/{example}.nnf", f"{OUTPUT_PATH}/{PID}_{example}.nnf")
 
-    # Eighth convert vivified cnf to dDNNF TODO CAN BE DONE EVEN WITH D4
+    #Eighth convert vivified cnf to dDNNF
     compPredDNNF = cnf2dDNNFCmd(f"{preproExample}", True, logFile)
-    grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{preproExample}.log", logFile, True)
+    if compPredDNNF:
+        grepTimeInC2D(f"{OUTPUT_PATH}/c2d_{preproExample}.log", logFile, True)
 
-    # TODO Tenth count OG dDNNF - VIV dDNNF
+    #Ninth count OG dDNNF and VIV dDNNF
     OGdDNNFworlds = None
     PREdDNNFworlds = None
     if compOGdDNNF:
@@ -377,6 +380,7 @@ def execute(solverPath, example, preProcessingList):
     if compPredDNNF:
         PREdDNNFworlds = ddnnfCountWorlds(f"{OUTPUT_PATH}/{preproExample}.nnf", logFile)
 
+    #Tenth compare number of solutions OG dDNNF and VIV dDNNF
     compareWorlds(OGdDNNFworlds, PREdDNNFworlds, logFile)
 
     with open(logFile, 'a') as f:

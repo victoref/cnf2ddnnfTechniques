@@ -1,0 +1,2 @@
+load mc2023_track1_008.cnf.nnf
+mc

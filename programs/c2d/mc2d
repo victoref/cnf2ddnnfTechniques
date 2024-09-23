@@ -1,0 +1,147 @@
+#!/bin/bash
+######################### HEADER ############################
+# Author: Víctor Emiliano Fernández Rubio
+# TFM project: TÉCNICAS DE PRE-PROCESADO EN SOLUCIONADORES
+#              SAT: VIVIFICACIÓN
+#############################################################
+
+printManual()
+{
+    echo "-in fname: speci es the CNF le name. See Appendix A for the syntax of le fname. This is"
+    echo " a required directive."
+    echo ""
+    echo "-reduce: reduces the compiled NNF by applying some post processing techniques. Reduction"
+    echo " will usually generate a smaller NNF, without changing its logical content, so it should almost"
+    echo " always be used."
+    echo ""
+    echo "-dt method n: speci es the method for constructing the dtree:"
+    echo " n = 0: uses hypergraph partitioning for constructing a dtree, with a random balance"
+    echo " factor when generating each decomposition."
+    echo " n =1: uses hypergraph partitioning for constructing a dtree, with xed balance factor"
+    echo " when generating each decomposition in the dtree (can be set using the-ubfs option"
+    echo " described below)."
+    echo " n = 2: uses the natural elimination order (123 n) for constructing the dtree."
+    echo " n = 3: uses the reverse natural elimination order (nn 1 dtree. 1) for constructing the"
+    echo " n = 4: uses a min ll elimination order for constructing the dtree."
+    echo " The default is n = 0."
+    echo ""
+    echo "-ubfs s e, where s e and each of s and e must be between 1 and 49 inclusive. This"
+    echo " directive is only meaningful with-dt method 1, as it speci es the balance factors to be used"
+    echo " when generating the dtree using hypergraph partitioning. The directive requests all balance"
+    echo " factors ranging from s to e to be used. For example, if-ubfs 20 23 is speci ed, the compiler"
+    echo " will generate dtrees using the following balance factors: 202122 and 23. The default is"
+    echo " s =25e=25. A lower balance factor will generate a more balanced dtree. Usually balance"
+    echo " factors between 20 and 30 will work best."
+    echo ""
+    echo "-dt count n: This is only meaningful with-dt method 0 and-dt method 1 as it speci es the"
+    echo " number of randomized dtrees to be generated. If-dt method 0 is speci ed, a total of n dtrees"
+    echo " will be generated and the best is chosen. If-dt method 1 is speci ed, then a total of n dtrees"
+    echo " will be generated for each balance factor the-ubfs s e directive can be used to specify which"
+    echo " balance factors to try. The default is n = 25, but this can take too much time for large CNFs"
+    echo " (those with thousands of variables). Hence, a smaller value may need to be chosen if the"
+    echo " dtree construction time is too large (at least when compared to compilation time)."
+    echo ""
+    echo "-dt in fname: requests that the dtree be loaded from a le, fname. See Appendix B for the"
+    echo " syntax of le fname."
+    echo ""
+    echo "-dt out: requests that the generated dtree be saved to a le fname.dtree, where fname is the"
+    echo " CNF le name speci ed by the-in directive."
+    echo ""
+    echo "-smooth: smoothes the compiled NNF."
+    echo ""
+    echo "-smooth all: smoothes the compiled NNF, while ensuring that every variable declared in the"
+    echo " CNF appears in the resulting NNF (even irrelevant ones)."
+    echo ""
+    echo "-minimize: minimizes the compiled NNF; that is, will generate an NNF whose models are"
+    echo " exactly the minimal cardinality models of the given CNF. The cardinality of a model is the"
+    echo " number of variables set to true in the model. The resulting NNF may not be equivalent to the"
+    echo " given CNF. This option produces an NNF which is also smoothed and includes all variables."
+    echo ""
+    echo "-count: counts the models of given CNF. It is usually more e cient to specify-smooth all"
+    echo " when counting, as that would allow using long integers instead of rationals (which would be"
+    echo " needed if the NNF is not smoothed)."
+    echo ""
+    echo "-in memory: suppresses the saving of compiled NNF to le. This is typically used with the-count"
+    echo " and-smooth all options, and can be lot faster. It may exhaust memory though, so"
+    echo " should be avoided in that case."
+    echo ""
+    echo "-exist fname: will existentially quantify the variables declared in le fname out of the resulting"
+    echo " NNF. Note that the resulting NNF is only guaranteed to be decomposable in that case"
+    echo " (determinism may no longer hold). See Appendix D for the syntax of le fname."
+    echo ""
+    echo "-cache size n: speci es the maximum amount of memory n, in Megabytes, which will be"
+    echo " allocated to the cache. The default is n = 512 Megabytes. When the cache lls up, the"
+    echo " compiler will start dropping cache entries based on a scheme that factors in the order of"
+    echo " insertion into the cache, and the cache hits for di erent cache entries. If the available memory"
+    echo " is not big enough to accommodate n Megabytes, then paging will take place and this may"
+    echo " slow the compiler considerably. It may be usually better to limit the cache size in order"
+    echo " to avoid paging since, in many cases, dropping cache entries would not a ect the compilers"
+    echo " performance as much as paging would. One should try to set n to the maximum value possible"
+    echo " without leading to paging. The default value will work for many problems, so this compiler"
+    echo " option should only be used on very demanding CNFs, if one does not have su cient memory"
+    echo " to accommodate the default value."
+    echo ""
+    echo "-nnf block size n: speci es the size n, in Megabytes, of memory blocks used to store the NNF."
+    echo " The default is n = 64 Megabytes. This is meant to avoid incremental memory allocation"
+    echo " which would be slower.2 The compiler will start by allocating n Megabytes to store the NNF."
+    echo " When this memory is consumed, it will allocated another n Megabytes, and so on. If n"
+    echo " Megabytes is not available, the compiler will reset n to n2 and try again. It will repeat this"
+    echo " process until it is able to allocate the necessary memory; otherwise, it will declare an out of"
+    echo " memory error."
+    echo ""
+    echo "-force fname: will ensure that variables declared in fname are instantiated in their dtree"
+    echo " nodes. That is, if variable v in fname appears in the separator for dtree node n, then v will"
+    echo " be instantiated when processing node n even if v is no longer shared between the left and"
+    echo " right subtrees of node n. See Appendix D for the syntax of le fname."
+    echo ""
+    echo "-keep trivial cls: will keep trivial clauses of the form x "
+    echo "x when loading the CNF. Keeping"
+    echo " these clauses provides control over the dtrees generated from elimination orders. Other types"
+    echo " of trivial clauses will always be removed (those of length > 2 and containing a literal and its"
+    echo " negation)."
+    echo ""
+    echo "-simplify: simpli es the CNF by running unit and binary resolution, removing satis ed clauses,"
+    echo " reducing clauses with resolved literals, and nally writing out a le that contains the simpli ed"
+    echo " CNF. If fname is the CNF le name, then fname simpli ed will be the name of le containing"
+    echo " the simpli ed CNF. This option invokes the compiler as a preprocessor, as it does not lead"
+    echo " to any compilation. All other directives (except-in) will be ignored in this case."
+    echo ""
+    echo "-simplify s: similar to-simplify except that it also removes clauses that are subsumed by other"
+    echo " clauses."
+    echo ""
+    echo "-check entailment: checks that the generated NNF is indeed decomposable and that it implies"
+    echo " every clause in the CNF. This is used for verifying the correctness of generated NNF. The"
+    echo " implication test is not compatible with the-exist option."
+    echo ""
+    echo "-visualize: saves les cnf.vcg, nnf.vcg and dtree.vcg, which can be viewed by the graph layout"
+    echo " tool at http://www.aisee.com/. These les contain visualization of the given CNF, the NNF"
+    echo " and dtree constructed for that CNF. If-smooth,-smooth all,-minimize or-reduce is speci ed,"
+    echo " a corresponding smoothed nnf.vcg, minimized nnf.vcg, or reduced nnf.vcg will be written."
+    echo ""
+    echo "-silent: suppresses the printing of compiler information, such as progress information, CNF"
+    echo " and NNF statistics."
+}
+
+getargs()
+{
+    while getopts "h" opt; do
+        case ${opt} in
+            h)
+                printManual
+                exit 0
+                ;;
+        esac
+    done
+    
+    args=("$@")
+}
+
+# Main
+
+getargs "$@"
+
+if [[ ${#args[@]} -eq 0 ]]; then
+    echo "[ERROR] No args."
+else
+    ./c2d "${args[@]}"
+fi

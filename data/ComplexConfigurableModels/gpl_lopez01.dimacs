@@ -1,0 +1,215 @@
+p cnf 66 148
+c 1 Gpl
+c 2 MainGpl
+c 3 Test
+c 4 StartHere
+c 5 Base
+c 6 Benchmark
+c 7 Prog
+c 8 Implementation
+c 9 NoEdges
+c 10 OnlyNeighbors
+c 11 Edges
+c 12 GraphType
+c 13 Directed
+c 14 Undirected
+c 15 GraphTypeReal
+c 16 DirType
+c 17 UndirType
+c 18 DirectedCommon
+c 19 Dir
+c 20 DirectedGR
+c 21 DirectedGnR
+c 22 DirectedGenR
+c 23 UndirectedCommon
+c 24 Undir
+c 25 UndirectedGR
+c 26 UndirectedGnR
+c 27 UndirectedGenR
+c 28 Weight
+c 29 Wgt
+c 30 UnWeighted
+c 31 Weighted
+c 32 WeightedCommon
+c 33 dProgdWeightedCommon
+c 34 WeightReal
+c 35 WeightedGR
+c 36 WeightedGnR
+c 37 WeightedGenR
+c 38 SearchCommon
+c 39 Search
+c 40 DFS
+c 41 BFS
+c 42 Alg
+c 43 Num
+c 44 Conn
+c 45 StrongC
+c 46 Cyc
+c 47 MPrim
+c 48 MKrus
+c 49 Shortest
+c 50 Number
+c 51 dProgdNumber
+c 52 Connected
+c 53 dProgdConnected
+c 54 Transpose
+c 55 StronglyConnected
+c 56 dProgdStronglyConnected
+c 57 Cycle
+c 58 dProgdCycle
+c 59 MSTPrimPrepGnR
+c 60 MSTPrimPrepGR
+c 61 MSTPrim
+c 62 dProgdMSTPrim
+c 63 MSTKruskalPrepGnR
+c 64 MSTKruskalPrepGR
+c 65 MSTKruskal
+c 66 dProgdMSTKruskal
+1 0
+-1 2 0
+-2 1 0
+-2 3 0
+-3 2 0
+-3 4 0
+-4 3 0
+-4 5 0
+-5 4 0
+-6 4 0
+-7 4 0
+-8 2 0
+-8 9 10 11 0
+-9 -10 0
+-9 -11 0
+-9 8 0
+-10 -11 0
+-10 8 0
+-11 8 0
+-12 2 0
+-12 13 14 0
+-13 -14 0
+-13 12 0
+-14 12 0
+-15 2 0
+-15 16 17 0
+-16 -17 0
+-16 15 0
+-17 15 0
+-16 18 0
+-18 16 0
+-16 19 0
+-19 16 0
+-19 20 21 22 0
+-20 -21 0
+-20 -22 0
+-20 19 0
+-21 -22 0
+-21 19 0
+-22 19 0
+-17 23 0
+-23 17 0
+-17 24 0
+-24 17 0
+-24 25 26 27 0
+-25 -26 0
+-25 -27 0
+-25 24 0
+-26 -27 0
+-26 24 0
+-27 24 0
+-28 2 0
+-28 29 30 0
+-29 -30 0
+-29 28 0
+-30 28 0
+-29 31 0
+-31 29 0
+-32 29 0
+-33 29 0
+-34 2 0
+-34 35 36 37 0
+-35 -36 0
+-35 -37 0
+-35 34 0
+-36 -37 0
+-36 34 0
+-37 34 0
+-38 2 0
+-39 2 0
+-39 40 41 0
+-40 -41 0
+-40 39 0
+-41 39 0
+-42 2 0
+-42 43 44 45 46 47 48 49 0
+-43 42 0
+-44 42 0
+-45 42 0
+-46 42 0
+-47 42 0
+-48 42 0
+-49 42 0
+-43 50 0
+-50 43 0
+-51 43 0
+-44 52 0
+-52 44 0
+-53 44 0
+-54 45 0
+-45 55 0
+-55 45 0
+-56 45 0
+-46 57 0
+-57 46 0
+-58 46 0
+-59 47 0
+-60 47 0
+-47 61 0
+-61 47 0
+-62 47 0
+-63 48 0
+-64 48 0
+-48 65 0
+-65 48 0
+-66 48 0
+-50 12 0
+-50 39 0
+-52 14 0
+-52 39 0
+-55 13 0
+-55 40 0
+-55 54 0
+-57 12 0
+-57 40 0
+-65 14 0
+-65 31 0
+-61 14 0
+-61 31 0
+-49 13 0
+-49 31 0
+-65 -65 -61 0
+-61 -65 -61 0
+-13 -9 20 0
+-13 -10 21 0
+-13 -11 22 0
+-14 -9 25 0
+-14 -10 26 0
+-14 -11 27 0
+-31 32 0
+-31 -9 35 0
+-31 -10 36 0
+-31 -11 37 0
+-7 6 0
+-7 -31 33 0
+-7 -50 51 0
+-7 -52 53 0
+-7 -55 56 0
+-7 -57 58 0
+-7 -61 62 0
+-61 -9 60 0
+-61 -10 59 0
+-7 -61 62 0
+-7 -65 66 0
+-65 -9 64 0
+-65 -10 63 0
+-39 38 0
+-7 6 0

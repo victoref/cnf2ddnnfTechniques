@@ -1,0 +1,16 @@
+c 1 MinePumpSys
+c 2 Command
+c 3 WaterRegulation
+c 4 MethaneDetect
+c 5 Start
+c 6 Stop
+c 7 Low
+c 8 Normal
+c 9 High
+p cnf 9 6
+1 0
+3 0
+9 0
+-5 2 0
+-6 2 0
+-2 5 6 0

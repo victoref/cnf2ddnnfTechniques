@@ -28,7 +28,7 @@ COMSPS_PATH = f"{PROGRAM_DIR}/COMSPS+/simp/glucose"
 C2D_PATH = f"{PROGRAM_DIR}/c2d/c2d"
 D4_PATH = f"{PROGRAM_DIR}/d4/d4"
 dREASONER_PATH = f"{PROGRAM_DIR}/dDNNFreasoner/query-dnnf"
-BACKBONE_PATH = f"{PROGRAM_DIR}/rubenBackbone/backbone.sh"
+BACKBONE_PATH = f"{PROGRAM_DIR}/Backbone/backbone.sh"
 
 EXAMPLES_PATH = f"{DATA_DIR}/CNF_EXAMPLES"
 OUTPUT_PATH = f"{DATA_DIR}/SAT_RESULTS"

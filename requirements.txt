@@ -1,34 +1,55 @@
--cmake-
-sudo apt install cmake
-sudo apt install zlib
+# Este fichero muestra los requisitos para compilar y ejecutar el proyecto
+# La intención de este fichero es meramente informativa y para nada pretende
+# automatizar la instlación de dichos requisitos.
+# TODO: automatizar el proceso
+
+## - CMake -
+# Se necesita instalar CMake y zlib para los SAT solvers(COMSPS+,Glucose+,Maple+,MapleLRB+):
+  sudo apt install cmake
+  sudo apt install zsh
+  sudo apt install zlib1g-dev
 
 
--python-
-pip install numpy
-sudo apt install python3-pip
-pip install numpy
-pip install matplotlib
-pip install seaborn
-sudo apt install zsh
+## - SAT solvers --
+# Ir al directorio simp de cada solver y ejecutar make/sudo make install
+# Los programas se entregan compilados, pero es posible que presenten errores
+# estilo, /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.34' not found
+# PAra arreglarlo simplemente make clean y recompilar
+  programs/COMSPS+/simp/
+  programs/Glucose+/simp/
+  programs/Maple+/simp/
+  programs/MapleLRB+/simp/
+
+  make/sudo make install
 
 
--c2d-
-sudo dpkg --add-architecture i386
-sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
+## - Python3 -
+# Para ejecutar el código de Python, necesitas instalar las siguientes dependencias:
+  sudo apt install python3-pip
+  pip install numpy
+  pip install matplotlib
+  pip install seaborn
 
 
--d4-
+## - c2d -
+# Para ejecutar c2d, necesitas añadir soporte para arquitecturas de 32 bits e instalar las siguientes librerías:
+  sudo dpkg --add-architecture i386
+  sudo apt-get update
+  sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
 
-	-lib boost graphical-
-	sudo apt-get install libboost-all-dev
 
-	-m4- INSTALL
-	tar xvzf m4-1.4.19.tar.gz
-	./configure
-	make
-	sudo make install
+## - d4 -
+### 1. Boost libraries:
+  sudo apt-get install libboost-all-dev
 
-	-gmp-
-	sudo apt-get install libgmp-dev
+### 2. m4 - Debes descargar e instalar m4:
+  tar xvzf m4-1.4.19.tar.gz
+  cd m4-1.4.19
+  ./configure
+  make/sudo make install
 
-	make -j8
+### 3. Instalar GMP (GNU Multiple Precision Arithmetic Library) library:
+  sudo apt-get install libgmp-dev
+
+### 4. Compilación de d4:
+  make -j8

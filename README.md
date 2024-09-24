@@ -57,13 +57,13 @@ Estos requisitos incluyen:
 2. Navega al directorio del proyecto:
 
    ```bash
-   cd cnf2ddnnfTechniques
+   cd cnf2ddnnfTechniques/scripts
    ```
 
 3. Ejecuta el preprocesamiento de una fórmula CNF de ejemplo con vivificación y backbone:
 
    ```bash
-   python3 scripts/SAT.py --solver pmc --example CNF_EXAMPLES/busybox_fernandez22.dimacs --vivification --backbone
+   python3 SAT.py --solver pmc --example CNF_EXAMPLES/busybox_fernandez22.dimacs --vivification --backbone
    ```
 
 ## Uso
@@ -72,7 +72,7 @@ Este proyecto permite ejecutar transformaciones de CNF a dDNNF utilizando las t�
 
 ```bash
 # Usar vivificación y backbone con un ejemplo CNF
-python3 scripts/SAT.py --solver maple --example CNF_EXAMPLES/mc2023_track1_008.cnf --vivification --backbone
+python3 SAT.py --solver maple --example CNF_EXAMPLES/mc2023_track1_008.cnf --vivification --backbone
 ```
 
 Las opciones del script son las siguientes:

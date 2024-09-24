@@ -38,6 +38,13 @@ TFM_Project/
 
 ### Requisitos
 
+Antes de ejecutar el proyecto, asegúrate de instalar los requisitos indicados en requirements.txt.
+Estos requisitos incluyen:
+
+- Dependencias para compilar los SAT solvers
+- Dependencias para ejecutar la solución en Python3
+- Soporte para arquitecturas de 32 bits para c2d
+- Dependecias de d4
 
 ### Instrucciones
 

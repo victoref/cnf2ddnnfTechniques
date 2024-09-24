@@ -14,7 +14,7 @@
 # Ir al directorio simp de cada solver y ejecutar make/sudo make install
 # Los programas se entregan compilados, pero es posible que presenten errores
 # estilo, /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.34' not found
-# PAra arreglarlo simplemente make clean y recompilar
+# Para arreglarlo simplemente make clean y recompilar
   programs/COMSPS+/simp/
   programs/Glucose+/simp/
   programs/Maple+/simp/

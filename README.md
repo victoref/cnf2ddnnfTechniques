@@ -91,39 +91,78 @@ nohup parallel --jobs 1 python3 SAT.py -s {1} -e {2} -v -b ::: pmc maple mapleLR
 ## Resultados
 
 
-El script genera los siguientes tres ficheros clave:
+El script genera los siguientes cuatro ficheros clave:
 
 1. **Fichero `.log`**: Contiene una línea en formato CSV con los valores de todas las métricas extraídas.
+Su nombre es "<nombreSATSolver>_<PID>_<Ejemplo>_<Fecha(YYY-MMDD_hhmmss).log"
 
 SATsolver;Example;Vivification;Backbone;#vars OGCNF;#clau OGCNF;OGCNF worlds;Vivify-Time;Backbone-Time;#vars VIVCNF;#clau PRECNF;PRECNF worlds;Same worlds;OGCNF2dDNNF Time;PRECNF2dDNNF Time;OGdDNNF worlds;PREdDNNF worlds;
-Ejemplo:
 
-   ```
+   ```plaintext
    pmc;mc2023_track1_008.cnf;1;2;6856;27626;171798691840;0,192401;0,180000;6856;11750;171798691840;TRUE;66,792;20,693;171798691840;171798691840;TRUE;
    ```
 
-2. **CNF preprocesada**: Archivo con el resultado de aplicar las técnicas de preprocesamiento. Formato DIMACS:
+2. **CNF preprocesada**: Archivo con el resultado de aplicar las técnicas de preprocesamiento en formato DIMACS.
+Su nombre es "prepro_<nombreSATSolver>_<PID>_<Ejemplo>"
 
    ```plaintext
    p cnf 6856 11750
    c Problem Statistics
+   c Number of variables: 6856
+   c Number of clauses: 26533
+   c Parse time (sec.) : 0.00
+   c
    -1 0
-   153 -465 0
    <...>
+   153 -465 0
+   -464 153 0
    c restarts : 21
    c decisions : 17287 (0.00 % random)
    c CPU time (sec.): 0.192401
    ```
 
-3. **dDNNF resultante**: Resultado de transformar la CNF a dDNNF (preprocesada o original). Ejemplo:
+3. **dDNNF original**: Contiene el resultado de transformar la CNF original.
+Su nombre es "<PID>_<Ejemplo>.nnf"
+
 
    ```plaintext
    nnf 11381 104485 6856
    L 61
    L 62
+   ...
    A 2 11376 11377
+   A 325 3317 3318 3319 3320 3321 3322 3323 3324 3325 3326 3327 3328 3329
+   3344 3345 3346 3347 3348 3349 3350 3351 3352 3353 3354 3355 3356 3357
    <...>
+   5426 5450 5451 5513 5514 5557 5558 5620 5621 5664 5665 5689 5690 5714
+   A 2 11378 11379
    ```
+
+
+4. **dDNNF resultante**: Resultado de transformar la CNF preprocesada a dDNNF.
+Su nombre es "prepro_<nombreSATSolver>_<PID>_<Ejemplo>.nnf"
+
+   ```plaintext
+   nnf 11286 59629 6856
+   L 61
+   L 62
+   ...
+   A 4003 3317 3318 3319 3320 3321 3322 3323 3324 3325 3326 3327 3328 3329
+   3330 3331 3332 3333 3334 3335 3336 3337 3338 3339 3340 3341 3342 3343
+   <...>
+   7128 7129 7130 7131 7132 7133 7134 7135 7136 7137 7138 7139 7140 7142
+   7144 7146 7149 7150 7
+   A 2 11283 11284
+   ```
+
+Estos resultados y métricas permiten medir y comparar las técnicas entre sí, la diferencia entre aplicarlas o no y si tiene importancia el orden de aplicación.
+Todo esto se puede agrupar en tablas y gráficas que permiten su visualización de forma más cómoda y extraer gran cantidad de información de las mismas.
+Algunos ejemplos son los tiempos que tardan las diferentes técnicas en transformar CNF a dDNNF, o la tendencia a aumentar en tiempo según el número de variables.
+
+<p align="center">
+<img src="data/readmeFigures/Figure_1.png" alt="Tabla de resultados" width="700">
+<img src="data/readmeFigures/Figure_2.png" alt="Tabla de resultados" width="700">
+</p>
 
 ## Amenazas a la Validez
 
@@ -131,11 +170,17 @@ Ejemplo:
 2. **Rendimiento del hardware**: Los tiempos de ejecución dependen en gran medida del hardware utilizado. Las pruebas en diferentes configuraciones podrían arrojar resultados distintos.
 3. **Orden de las técnicas**: El orden de aplicación de las técnicas de preprocesamiento puede influir en los resultados finales, lo cual es un área a explorar más profundamente.
 
+## Conclusiones
+
+La aplicación de las técnicas propuestas ha sido un éxito, cumpliendo con la premisa inicial de optimización y verificación en la transformación de CNF a dDNNF.
+A partir de las métricas obtenidas, se pueden derivar conclusiones interesantes sobre la eficiencia de las técnicas combinadas y el impacto del orden en que se aplican.
+Este análisis proporciona una base sólida para futuras investigaciones y optimizaciones en la resolución de problemas complejos.
+
 ## Licencia
 
 Este proyecto está licenciado bajo los términos de la Licencia MIT. Ver [LICENSE](./LICENSE) para más detalles.
 
 ## Contacto
 
-Para cualquier pregunta o contribución, puedes contactarme a través de [victoref@correo.com](mailto:victoref@correo.com).
+Para cualquier pregunta o contribución, puedes contactarme a través de [victorefr97@gmail.com](mailto:victorefr97@gmail.com).
 
